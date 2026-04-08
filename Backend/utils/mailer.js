@@ -1,6 +1,16 @@
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazily initialize Resend so the server doesn't crash if RESEND_API_KEY is missing locally
+let _resend = null;
+const getResend = () => {
+  if (!_resend) {
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error('RESEND_API_KEY is not set');
+    }
+    _resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+};
 
 /**
  * Sends an HTML receipt to the customer via Resend (HTTP-based, works on all hosts)
@@ -26,7 +36,7 @@ const sendReceiptEmail = async (orderData, toEmail) => {
       </tr>
     `).join('');
 
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: 'Tasty Hot Orders <onboarding@resend.dev>',
       to: toEmail,
       subject: `Order Receipt - #${orderData.orderNumber}`,

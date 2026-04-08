@@ -3,7 +3,6 @@ import { motion } from "motion/react";
 import imgLogoPng from "../Categories/fe9439b0b5b8f4134a87490c14dd926f577a90d9.png";
 import imgWhatsApp from "../Categories/ed00f9add7cd5cb0ff88532464058a5e59bc4497.png";
 import imgImage1 from "../Categories/99fddedb4828ce247ec845e7f4b3ade3c1715928.png";
-import imgHero from "/images/hero.jpeg";
 import { useAuth } from '../../app/AuthContext';
 import { User, LogIn } from 'lucide-react';
 import LoginSignupModal from "../Auth/LoginSignupModal";
@@ -23,10 +22,10 @@ function TopBar({ cartItemsCount = 0, onNavigateToCart, onNavigateToAdmin, onNav
           <div className="w-[49px] h-[46px] ml-[-0.3rem]">
             <img alt="Tasty Hot Logo" className="w-full h-full object-cover" src={imgLogoPng} />
           </div>
-          
+
           <div className="flex items-center gap-3 relative mr-[-1.5rem]">
             {isAdmin && (
-              <button 
+              <button
                 onClick={onNavigateToAdmin}
                 className="text-[10px] font-bold bg-[#f51c27] text-white px-2 py-1 rounded hover:bg-[#d90429] transition-colors"
                 title="Admin Dashboard"
@@ -65,31 +64,64 @@ function TopBar({ cartItemsCount = 0, onNavigateToCart, onNavigateToAdmin, onNav
 
 function HeroSection({ onExploreClick }: { onExploreClick: () => void }) {
   return (
-    <div className="h-screen flex flex-col items-center justify-center px-4 pb-20">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.8 }}
-        className="w-full h-[50vh] max-w-2xl rounded-[48px] mb-6 shadow-2xl overflow-hidden"
-      >
-        <img 
-          src={imgHero} 
-          alt="Tasty Hot Hero" 
-          className="w-full h-full object-cover"
-        />
-      </motion.div>
+    <div className="relative h-screen flex flex-col items-center justify-end pb-20 overflow-hidden">
+      {/* Full-screen background image */}
+      <img
+        src="/images/hero.jpeg"
+        alt="Tasty Hot — Fresh Delicious Food"
+        className="absolute inset-0 w-full h-full object-cover object-center"
+      />
 
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onExploreClick}
-        className="bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] px-12 py-4 text-[20px] font-bold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all"
+      {/* Gradient overlay: light at top (for topbar), dark at bottom (for text readability) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/80" />
+
+      {/* Content */}
+      <div className="relative z-10 text-center px-6 w-full max-w-lg">
+        <motion.h1
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="text-5xl md:text-6xl font-black text-white mb-2 drop-shadow-2xl tracking-tight"
+        >
+          Tasty Hot
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="text-base text-white/80 mb-8 font-medium tracking-wide drop-shadow-lg"
+        >
+          Fresh. Bold. Delivered to your door.
+        </motion.p>
+
+        <motion.button
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.35 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onExploreClick}
+          className="bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] px-12 py-4 text-[20px] font-bold text-white hover:bg-[rgba(157,157,157,0.4)] transition-all border border-white/20"
+        >
+          Explore Menu
+        </motion.button>
+      </div>
+
+      {/* Scroll indicator */}
+      <motion.div
+        animate={{ y: [0, 8, 0] }}
+        transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 text-white/50"
       >
-        Explore Menu
-      </motion.button>
+        <svg width="28" height="28" fill="none" viewBox="0 0 24 24">
+          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </motion.div>
     </div>
   );
 }
+
 
 function HighlightsSection() {
   const highlights = [
@@ -271,16 +303,22 @@ function Footer() {
 
 export default function HomePage({ onExploreClick, cartItemsCount, onNavigateToCart, onNavigateToAdmin, onNavigateToProfile }: { onExploreClick: () => void; cartItemsCount?: number; onNavigateToCart?: () => void; onNavigateToAdmin?: () => void; onNavigateToProfile?: () => void }) {
   return (
-    <div className="min-h-screen bg-[#fbf4e8] relative overflow-hidden flex flex-col items-center">
-      <div className="w-full max-w-[1280px] min-h-screen flex flex-col relative z-10 px-2 lg:px-4">
+    <div className="min-h-screen bg-[#fbf4e8]">
+      {/* TopBar — sticky, glassmorphic, sits on top of the hero image */}
+      <div className="w-full relative z-[100] px-2 lg:px-4">
         <TopBar cartItemsCount={cartItemsCount} onNavigateToCart={onNavigateToCart} onNavigateToAdmin={onNavigateToAdmin} onNavigateToProfile={onNavigateToProfile} />
-      <div className="flex-1">
+      </div>
+
+      {/* Hero — pulled up behind the TopBar so image is truly full-screen */}
+      <div className="-mt-[110px]">
         <HeroSection onExploreClick={onExploreClick} />
-        <HighlightsSection />
-        <AboutUsSection />
       </div>
+
+      {/* Below-fold content */}
+      <HighlightsSection />
+      <AboutUsSection />
       <Footer />
-      </div>
     </div>
   );
 }
+
