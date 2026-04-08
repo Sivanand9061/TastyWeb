@@ -189,3 +189,16 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* 
+ * iOS Safari Zoom Fix
+ * Safari auto-zooms when an input has font-size < 16px.
+ * This forces all inputs to be at least 16px on touch devices.
+ */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
