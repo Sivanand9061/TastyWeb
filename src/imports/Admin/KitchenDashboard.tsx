@@ -4,6 +4,7 @@ import { ref, onValue, update } from 'firebase/database';
 import { useAuth } from '../../app/AuthContext';
 import { ArrowLeft, Bell, BellOff, Volume2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
 
 interface OrderItem {
   name: string;
@@ -77,7 +78,7 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
       });
     } catch (e) {
       console.error("Failed to update status:", e);
-      alert("Failed to update status. Check permissions.");
+      toast.error("Failed to update order status. Check your permissions.");
     }
   };
 

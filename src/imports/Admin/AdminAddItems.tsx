@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../app/AuthContext";
 import { auth } from "../../firebase";
 import LoginSignupModal from "../Auth/LoginSignupModal";
 import { ref, get, set } from "firebase/database";
 import { db } from "../../firebase";
+import { toast } from "sonner";
 
 interface MenuItem {
   id?: string;
@@ -99,11 +100,11 @@ export default function AdminAddItems() {
       if (res.ok) {
         setMenuItems(prev => prev.map(m => m.id === item.id ? { ...m, available: newStatus } : m));
       } else {
-        alert("Failed to toggle item");
+        toast.error("Failed to toggle item availability.");
       }
     } catch (err) {
       console.error(err);
-      alert("Error toggling item");
+      toast.error("Connection error. Could not update item.");
     }
   };
 
