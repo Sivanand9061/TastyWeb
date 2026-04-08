@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
 import { ref, set, get } from 'firebase/database';
 import { auth, db, googleProvider } from '../../firebase';
 import { motion, AnimatePresence } from 'motion/react';
@@ -63,6 +63,27 @@ export default function LoginSignupModal({ isOpen, onClose }: LoginSignupModalPr
       }
     }
   }, [isOpen]);
+
+  // Handle Google redirect result when user returns to the page after redirect
+  useEffect(() => {
+    getRedirectResult(auth).then(async (result) => {
+      if (!result) return;
+      const userRef = ref(db, `users/${result.user.uid}`);
+      const snapshot = await get(userRef);
+      if (!snapshot.exists()) {
+        await set(userRef, {
+          email: result.user.email,
+          role: 'user',
+          createdAt: new Date().toISOString()
+        });
+      }
+      onClose();
+    }).catch((err) => {
+      if (err.code !== 'auth/no-auth-event') {
+        setError(getFriendlyErrorMessage(err));
+      }
+    });
+  }, []);
 
   const setupRecaptcha = () => {
     if (!window.recaptchaVerifier) {
@@ -157,23 +178,11 @@ export default function LoginSignupModal({ isOpen, onClose }: LoginSignupModalPr
     setError('');
     setLoading(true);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      
-      // Check if user already exists in DB to prevent overwriting roles
-      const userRef = ref(db, `users/${result.user.uid}`);
-      const snapshot = await get(userRef);
-      
-      if (!snapshot.exists()) {
-        await set(userRef, {
-          email: result.user.email,
-          role: 'user',
-          createdAt: new Date().toISOString()
-        });
-      }
-      onClose();
+      // Use redirect instead of popup to avoid browser popup blockers on production
+      await signInWithRedirect(auth, googleProvider);
+      // Page will redirect and return — result is handled in the useEffect above
     } catch (err: any) {
       setError(getFriendlyErrorMessage(err));
-    } finally {
       setLoading(false);
     }
   };
