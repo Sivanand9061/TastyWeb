@@ -1,17 +1,9 @@
-const nodemailer = require('nodemailer');
-require('dotenv').config();
+const { Resend } = require('resend');
 
-// Create a reusable transporter using the default SMTP transport
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER, 
-    pass: process.env.EMAIL_PASS || process.env.EMAIL_APP_PASSWORD,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
- * Sends an HTML receipt to the customer
+ * Sends an HTML receipt to the customer via Resend (HTTP-based, works on all hosts)
  * @param {Object} orderData 
  * @param {string} toEmail 
  */
@@ -21,8 +13,12 @@ const sendReceiptEmail = async (orderData, toEmail) => {
     return;
   }
 
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("⚠️ RESEND_API_KEY not set. Skipping email dispatch.");
+    return;
+  }
+
   try {
-    // Build the items list HTML
     const itemsHtml = orderData.items.map(item => `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eeeeee;">${item.quantity}x ${item.name}</td>
@@ -30,8 +26,8 @@ const sendReceiptEmail = async (orderData, toEmail) => {
       </tr>
     `).join('');
 
-    const mailOptions = {
-      from: `"Tasty Hot Orders" <${process.env.EMAIL_USER}>`,
+    const { data, error } = await resend.emails.send({
+      from: 'Tasty Hot Orders <onboarding@resend.dev>',
       to: toEmail,
       subject: `Order Receipt - #${orderData.orderNumber}`,
       html: `
@@ -69,19 +65,20 @@ const sendReceiptEmail = async (orderData, toEmail) => {
             </table>
 
             <p style="text-align: center; color: #777777; font-size: 14px; margin-top: 30px;">
-              If you have any questions, feel free to reply to this email. Enjoy your meal!
+              If you have any questions, feel free to contact us. Enjoy your meal!
             </p>
           </div>
         </div>
       `
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✉️ Receipt email sent successfully to ${info.envelope.to[0]}`);
-    try { require('fs').appendFileSync(__dirname + '/mailer_log.txt', new Date().toISOString() + ' SUCCESS: Sent to ' + info.envelope.to[0] + '\n'); } catch (e) {}
+    if (error) {
+      console.error("❌ Failed to send receipt email via Resend:", error);
+    } else {
+      console.log(`✉️ Receipt email sent successfully to ${toEmail} (ID: ${data.id})`);
+    }
   } catch (error) {
     console.error("❌ Failed to send receipt email:", error);
-    try { require('fs').appendFileSync(__dirname + '/mailer_log.txt', new Date().toISOString() + ' ERROR: ' + error.toString() + '\n'); } catch (e) {}
   }
 };
 
