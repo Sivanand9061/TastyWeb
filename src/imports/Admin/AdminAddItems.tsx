@@ -60,6 +60,7 @@ interface MenuItem {
   category: string;
   available?: boolean;
   image?: string;
+  variants?: { label: string; price: string }[];
 }
 
 const DEFAULT_CATEGORIES = ["Pizza", "Burgers", "Pasta", "Desserts", "Drinks", "Salads"];
@@ -110,6 +111,14 @@ export default function AdminAddItems() {
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Variants state
+  const [variants, setVariants] = useState<{ label: string; price: string }[]>([]);
+  const [newVariantLabel, setNewVariantLabel] = useState("");
+  const [newVariantPrice, setNewVariantPrice] = useState("");
+  const [editVariants, setEditVariants] = useState<{ label: string; price: string }[]>([]);
+  const [editVariantLabel, setEditVariantLabel] = useState("");
+  const [editVariantPrice, setEditVariantPrice] = useState("");
 
   // Load everything on mount
   useEffect(() => {
@@ -291,7 +300,7 @@ export default function AdminAddItems() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.description || !formData.price) {
+    if (!formData.name || !formData.description || (!formData.price && variants.length === 0)) {
       setMessage({ type: "error", text: "All fields are required!" });
       return;
     }
@@ -307,10 +316,16 @@ export default function AdminAddItems() {
         setUploadingImage(false);
       }
 
+      const payload = {
+        ...formData,
+        image: imageUrl,
+        ...(variants.length > 0 ? { variants, price: variants[0].price } : {}),
+      };
+
       const res = await fetch(`${API_URL()}/api/menu`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ ...formData, image: imageUrl }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Failed to add item');
       const newItem = await res.json();
@@ -318,6 +333,9 @@ export default function AdminAddItems() {
       setFormData({ name: "", description: "", price: "", category: categories[0] || "" });
       setImageFile(null);
       setImagePreview(null);
+      setVariants([]);
+      setNewVariantLabel("");
+      setNewVariantPrice("");
       setMenuItems(prev => [newItem, ...prev]);
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
@@ -367,10 +385,50 @@ export default function AdminAddItems() {
               <textarea name="description" value={formData.description} onChange={handleChange} placeholder="e.g., Grilled chicken with garlic sauce, fresh veggies" rows={3} className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
             </div>
             <div className="mb-5">
-              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Price *</label>
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Price * <span className="text-gray-400 font-normal">(leave blank if using variants)</span></label>
               <div className="flex items-center gap-2">
                 <span className="text-[16px] font-semibold">AED</span>
-                <input type="number" name="price" value={formData.price} onChange={handleChange} placeholder="35" step="0.01" className="flex-1 px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
+                <input type="number" name="price" value={formData.price} onChange={handleChange} placeholder="35" step="0.01" className="flex-1 px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" disabled={variants.length > 0} />
+              </div>
+            </div>
+
+            {/* ── VARIANTS BUILDER ── */}
+            <div className="mb-6">
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-1">Size Variants <span className="text-gray-400 font-normal">(optional — e.g. Half / Full)</span></label>
+              <p className="text-[12px] text-gray-400 mb-3">Add variants when the item has multiple sizes at different prices. If variants are added, the Price field above is ignored.</p>
+              {variants.length > 0 && (
+                <div className="flex flex-col gap-2 mb-3">
+                  {variants.map((v, i) => (
+                    <div key={i} className="flex items-center justify-between bg-[var(--bg-primary)] border border-[var(--bg-card-border)] rounded-[10px] px-4 py-2">
+                      <span className="font-semibold text-[14px] text-[var(--text-primary)]">{v.label}</span>
+                      <span className="text-[14px] text-[var(--text-price)]">AED {v.price}</span>
+                      <button type="button" onClick={() => setVariants(prev => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500 ml-3"><X size={14} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="text" placeholder="Label (e.g. Half)" value={newVariantLabel}
+                  onChange={e => setNewVariantLabel(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-[var(--bg-input-border)] rounded-[10px] text-[14px] focus:outline-none focus:border-[var(--accent)]"
+                />
+                <input
+                  type="number" placeholder="Price" value={newVariantPrice}
+                  onChange={e => setNewVariantPrice(e.target.value)} step="0.01"
+                  className="w-28 px-3 py-2 border border-[var(--bg-input-border)] rounded-[10px] text-[14px] focus:outline-none focus:border-[var(--accent)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!newVariantLabel.trim() || !newVariantPrice.trim()) return;
+                    setVariants(prev => [...prev, { label: newVariantLabel.trim(), price: newVariantPrice.trim() }]);
+                    setNewVariantLabel(""); setNewVariantPrice("");
+                  }}
+                  className="px-4 py-2 bg-[#1c1c1a] text-white rounded-[10px] font-bold text-[13px] hover:bg-gray-800 flex items-center gap-1"
+                >
+                  <Plus size={14} /> Add
+                </button>
               </div>
             </div>
             <div className="mb-6">
@@ -585,6 +643,9 @@ export default function AdminAddItems() {
                         setEditForm({ name: item.name, description: item.description, price: item.price, category: item.category || categories[0] || "" });
                         setEditImagePreview(item.image || null);
                         setEditImageFile(null);
+                        setEditVariants(item.variants || []);
+                        setEditVariantLabel("");
+                        setEditVariantPrice("");
                       }}
                       className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                       title="Edit item"
@@ -629,10 +690,35 @@ export default function AdminAddItems() {
                 <textarea value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} rows={3} className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
               </div>
               <div>
-                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Price</label>
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Price <span className="text-gray-400 font-normal text-[12px]">(ignored if variants set)</span></label>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">AED</span>
-                  <input type="number" step="0.01" value={editForm.price} onChange={e => setEditForm(p => ({ ...p, price: e.target.value }))} className="flex-1 px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
+                  <input type="number" step="0.01" value={editForm.price} onChange={e => setEditForm(p => ({ ...p, price: e.target.value }))} disabled={editVariants.length > 0} className="flex-1 px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)] disabled:opacity-50" />
+                </div>
+              </div>
+
+              {/* ── EDIT VARIANTS ── */}
+              <div>
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Size Variants <span className="text-gray-400 font-normal text-[12px]">(optional)</span></label>
+                {editVariants.length > 0 && (
+                  <div className="flex flex-col gap-2 mb-3">
+                    {editVariants.map((v, i) => (
+                      <div key={i} className="flex items-center justify-between bg-[var(--bg-primary)] border border-[var(--bg-card-border)] rounded-[10px] px-4 py-2">
+                        <span className="font-semibold text-[14px] text-[var(--text-primary)]">{v.label}</span>
+                        <span className="text-[14px] text-[var(--text-price)]">AED {v.price}</span>
+                        <button type="button" onClick={() => setEditVariants(prev => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500 ml-3"><X size={14} /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input type="text" placeholder="Label" value={editVariantLabel} onChange={e => setEditVariantLabel(e.target.value)} className="flex-1 px-3 py-2 border border-[var(--bg-input-border)] rounded-[10px] text-[14px] focus:outline-none focus:border-[var(--accent)]" />
+                  <input type="number" placeholder="Price" value={editVariantPrice} onChange={e => setEditVariantPrice(e.target.value)} step="0.01" className="w-28 px-3 py-2 border border-[var(--bg-input-border)] rounded-[10px] text-[14px] focus:outline-none focus:border-[var(--accent)]" />
+                  <button type="button" onClick={() => {
+                    if (!editVariantLabel.trim() || !editVariantPrice.trim()) return;
+                    setEditVariants(prev => [...prev, { label: editVariantLabel.trim(), price: editVariantPrice.trim() }]);
+                    setEditVariantLabel(""); setEditVariantPrice("");
+                  }} className="px-3 py-2 bg-[#1c1c1a] text-white rounded-[10px] font-bold text-[12px] hover:bg-gray-800 flex items-center gap-1"><Plus size={13} /> Add</button>
                 </div>
               </div>
               <div>
@@ -682,7 +768,11 @@ export default function AdminAddItems() {
                     const res = await fetch(`${API_URL()}/api/menu/${editItem.id}`, {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                      body: JSON.stringify({ ...editForm, image: imageUrl }),
+                      body: JSON.stringify({
+                        ...editForm,
+                        image: imageUrl,
+                        ...(editVariants.length > 0 ? { variants: editVariants, price: editVariants[0].price } : { variants: [] }),
+                      }),
                     });
                     if (!res.ok) throw new Error('Failed to update');
                     const updated = await res.json();

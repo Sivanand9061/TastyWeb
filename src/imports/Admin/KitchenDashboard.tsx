@@ -2,9 +2,10 @@ import React, { useEffect, useState, useRef } from 'react';
 import { db } from '../../firebase';
 import { ref, onValue, update } from 'firebase/database';
 import { useAuth } from '../../app/AuthContext';
-import { ArrowLeft, Bell, BellOff, Volume2 } from 'lucide-react';
+import { ArrowLeft, Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import { auth } from '../../firebase';
 
 interface OrderItem {
   name: string;
@@ -34,6 +35,9 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
   const [loading, setLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [activeTab, setActiveTab] = useState<'pending' | 'preparing' | 'onWay'>('pending');
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetting, setResetting] = useState(false);
   const previousOrdersLengthRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -89,6 +93,29 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
     }
   };
 
+  const resetOrders = async () => {
+    if (resetConfirmText !== 'RESET') return;
+    setResetting(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('Not authenticated');
+      const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiUrl}/api/orders/reset`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Server rejected request');
+      toast.success('All orders cleared.');
+      setShowResetModal(false);
+      setResetConfirmText('');
+    } catch (e) {
+      console.error('Reset failed:', e);
+      toast.error('Failed to reset orders.');
+    } finally {
+      setResetting(false);
+    }
+  };
+
   if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading...</div>;
 
   if (!isAdmin) return (
@@ -115,7 +142,7 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
           <h1 className="text-2xl font-black text-red-500">Kitchen Operations</h1>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {!soundEnabled ? (
             <button 
               onClick={enableSound}
@@ -133,6 +160,12 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
               Alerts Active
             </button>
           )}
+          <button
+            onClick={() => { setShowResetModal(true); setResetConfirmText(''); }}
+            className="flex items-center gap-2 bg-red-600/20 border border-red-600 text-red-400 px-4 py-2 rounded-xl font-bold hover:bg-red-600/30 transition-colors text-sm"
+          >
+            🗑️ Reset Orders
+          </button>
           <div className="bg-gray-700 px-4 py-2 rounded-xl font-bold text-gray-300">
             {new Date().toLocaleTimeString()}
           </div>
@@ -236,6 +269,48 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
 
         </div>
       </div>
+
+      {/* ── RESET ORDERS MODAL ── */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-6">
+          <div className="bg-gray-800 border border-gray-700 rounded-[24px] p-8 max-w-sm w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <span className="text-2xl">🗑️</span>
+              </div>
+              <div>
+                <h3 className="text-[20px] font-black text-white">Reset All Orders</h3>
+                <p className="text-[13px] text-gray-400">This cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-[14px] text-gray-300 mb-5">
+              This will permanently delete all <strong className="text-white">{orders.length} orders</strong> from the dashboard. Type <strong className="text-red-400">RESET</strong> to confirm.
+            </p>
+            <input
+              type="text"
+              value={resetConfirmText}
+              onChange={e => setResetConfirmText(e.target.value)}
+              placeholder='Type "RESET" to confirm'
+              className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-[12px] text-[16px] text-white mb-5 focus:outline-none focus:border-red-500 placeholder-gray-500"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowResetModal(false); setResetConfirmText(''); }}
+                className="flex-1 py-3 border-2 border-gray-600 rounded-[12px] font-bold text-gray-300 hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={resetOrders}
+                disabled={resetConfirmText !== 'RESET' || resetting}
+                className="flex-1 py-3 bg-red-600 text-white rounded-[12px] font-bold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {resetting ? 'Deleting...' : 'Delete All'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

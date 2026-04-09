@@ -12,6 +12,7 @@ interface CartItem {
   price: string;
   quantity: number;
   image?: string;
+  variant?: string;
 }
 
 export default function App() {
@@ -50,15 +51,19 @@ export default function App() {
   };
 
   const handleAddToCart = (item: CartItem) => {
-    const existingItem = cartItems.find(ci => ci.name === item.name);
+    // Match on name + variant so Half and Full are separate cart lines
+    const existingItem = cartItems.find(
+      ci => ci.name === item.name && (ci.variant ?? '') === (item.variant ?? '')
+    );
     if (existingItem) {
-      setCartItems(cartItems.map(ci => 
-        ci.name === item.name ? { ...ci, quantity: ci.quantity + item.quantity } : ci
+      setCartItems(cartItems.map(ci =>
+        ci.name === item.name && (ci.variant ?? '') === (item.variant ?? '')
+          ? { ...ci, quantity: ci.quantity + item.quantity }
+          : ci
       ));
     } else {
       setCartItems([...cartItems, item]);
     }
-    // Show success message - no navigation
   };
 
   const handleGoToCart = () => {

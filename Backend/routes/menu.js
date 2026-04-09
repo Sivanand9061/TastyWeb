@@ -56,7 +56,7 @@ router.get('/:id', async (req, res) => {
 // Add new menu item (admin only)
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { name, description, price, category, image } = req.body;
+    const { name, description, price, category, image, variants } = req.body;
     
     const itemId = req.db.ref('menu_items').push().key;
     const newItem = {
@@ -69,6 +69,11 @@ router.post('/', requireAdmin, async (req, res) => {
       available: true,
       createdAt: new Date().toISOString(),
     };
+
+    // Only include variants if they were provided
+    if (variants && Array.isArray(variants) && variants.length > 0) {
+      newItem.variants = variants;
+    }
     
     await req.db.ref(`menu_items/${itemId}`).set(newItem);
     res.status(201).json(newItem);
@@ -87,7 +92,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
 
     // Only update fields that are provided
     const updates = {};
-    const allowed = ['name', 'description', 'price', 'category', 'image', 'available'];
+    const allowed = ['name', 'description', 'price', 'category', 'image', 'available', 'variants'];
     allowed.forEach(field => {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     });

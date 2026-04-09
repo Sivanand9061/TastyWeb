@@ -23,6 +23,7 @@ interface CartItem {
   price: string;
   quantity: number;
   image?: string;
+  variant?: string;
 }
 
 interface OrderFormData {
@@ -102,7 +103,10 @@ function CartItemCard({ item, onRemove, onQuantityChange }: { item: CartItem & {
         </div>
         
         <div className="flex-1">
-          <h3 className="text-[18px] font-bold text-[#1c1c1a] mb-1">{item.name}</h3>
+          <h3 className="text-[18px] font-bold text-[#1c1c1a] mb-0.5">{item.name}</h3>
+          {item.variant && (
+            <p className="text-[12px] font-semibold text-[var(--accent)] mb-1">{item.variant}</p>
+          )}
           <p className="text-[12px] text-[#727272] mb-4">{item.description}</p>
           
           <div className="flex items-center justify-between">

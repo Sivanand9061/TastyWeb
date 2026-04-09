@@ -168,6 +168,7 @@ interface MenuItem {
   price: string;
   available?: boolean;
   image?: string;
+  variants?: { label: string; price: string }[];
 }
 
 function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData, onAddToCart }: MenuListProps) {
@@ -214,46 +215,88 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
         return (
           <div key={category} ref={categoryRefs[categoryIndex]} data-cat={categoryIndex} className="scroll-mt-[140px]">
             <h2 className="text-[24px] font-bold text-[var(--text-primary)] mb-6 mt-8">{category}</h2>
-            {filtered[category as keyof typeof filtered].map((item, itemIndex) => (
-            <div 
-              key={itemIndex} 
-              className={`pb-9 mb-9 border-b border-[var(--item-border)] ${item.available !== false ? 'cursor-pointer' : 'opacity-60 grayscale-[50%]'} -mx-4 px-4 rounded-lg transition-colors`}
-              onClick={() => {
-                if (item.available !== false) onItemClick(item);
-              }}
-            >
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <h3 className="text-[15.5px] font-semibold mb-2">{item.name}</h3>
-                  <p className="text-[12.8px] text-gray-700 mb-6">{item.description}</p>
-                  <div className="flex items-center justify-between mt-auto">
-                    <p className={`text-[15.5px] font-semibold ${item.available === false ? 'text-gray-400' : 'text-[var(--text-price)]'}`}>
-                      AED {item.price}
-                    </p>
+            {filtered[category as keyof typeof filtered].map((item, itemIndex) => {
+              const hasVariants = item.variants && item.variants.length > 0;
+              return (
+              <div
+                key={itemIndex}
+                className={`pb-9 mb-9 border-b border-[var(--item-border)] ${item.available !== false && !hasVariants ? 'cursor-pointer' : ''} -mx-4 px-4 rounded-lg transition-colors`}
+                onClick={() => {
+                  // For variant items: tapping the card opens the detail view
+                  // For regular available items: same behaviour
+                  if (item.available !== false) onItemClick(item);
+                }}
+              >
+                {/* Top row: text + image */}
+                <div className="flex gap-4 mb-3">
+                  <div className="flex-1">
+                    <h3 className="text-[15.5px] font-semibold mb-2">{item.name}</h3>
+                    <p className="text-[12.8px] text-gray-700 mb-4">{item.description}</p>
+                    {/* Price display */}
                     {item.available === false ? (
                       <span className="text-red-500 text-[12px] font-bold px-4 py-2 border border-red-500 rounded-[35px]">
                         OUT OF STOCK
                       </span>
+                    ) : !hasVariants ? (
+                      /* Normal item — price + Add button in a row */
+                      <div className="flex items-center justify-between">
+                        <p className="text-[15.5px] font-semibold text-[var(--text-price)]">AED {item.price}</p>
+                        <button
+                          onClick={(e) => handleAddToCart(e, item)}
+                          className="bg-[var(--btn-add-bg)] backdrop-blur-sm shadow-[var(--topbar-shadow)] rounded-[35px] px-4 py-2 text-[12px] font-medium text-[var(--accent)] hover:bg-[var(--btn-add-hover)] transition-all"
+                        >
+                          Add
+                        </button>
+                      </div>
                     ) : (
-                      <button
-                        onClick={(e) => handleAddToCart(e, item)}
-                        className="bg-[var(--btn-add-bg)] backdrop-blur-sm shadow-[var(--topbar-shadow)] rounded-[35px] px-4 py-2 text-[12px] font-medium text-[var(--accent)] hover:bg-[var(--btn-add-hover)] transition-all"
-                      >
-                        Add
-                      </button>
+                      /* Variant item — just show starting price; selector is below */
+                      <p className="text-[15.5px] font-semibold text-[var(--text-price)]">
+                        From AED {Math.min(...item.variants!.map(v => parseFloat(v.price))).toFixed(0)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="w-[110px] h-[100px] rounded-[20px] flex-shrink-0 overflow-hidden bg-gradient-to-br from-[var(--img-placeholder-from)] to-[var(--img-placeholder-to)]">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>
                     )}
                   </div>
                 </div>
-                <div className="w-[120px] h-[110px] rounded-[24px] flex-shrink-0 overflow-hidden bg-gradient-to-br from-[var(--img-placeholder-from)] to-[var(--img-placeholder-to)]">
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>
-                  )}
-                </div>
+
+                {/* Variant size selector row — only shown for variant items */}
+                {hasVariants && item.available !== false && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex gap-2 flex-wrap"
+                  >
+                    {item.variants!.map(v => (
+                      <button
+                        key={v.label}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onAddToCart) {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            onAddToCart({ ...item, price: v.price, quantity: 1, variant: v.label } as any);
+                          }
+                        }}
+                        className="flex items-center gap-1.5 bg-[var(--btn-add-bg)] border border-[var(--accent)]/20 backdrop-blur-sm rounded-[35px] px-4 py-2 hover:bg-[var(--accent)] hover:text-white transition-all duration-200 group"
+                      >
+                        <span className="text-[12px] font-bold text-[var(--accent)] group-hover:text-white">{v.label}</span>
+                        <span className="text-[11px] text-[var(--text-secondary)] group-hover:text-white/80">· AED {v.price}</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onItemClick(item); }}
+                      className="flex items-center gap-1 px-3 py-2 text-[11px] text-[var(--text-secondary)] opacity-50 hover:opacity-75 transition-opacity"
+                    >
+                      More info ›
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
-            ))}
+              );
+            })}
           </div>
         );
       })}
@@ -269,11 +312,30 @@ interface ProductDetailProps {
 }
 
 function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProps) {
+  const [selectedVariant, setSelectedVariant] = useState<{ label: string; price: string } | null>(null);
+
+  // Reset variant selection each time a new item opens
+  useEffect(() => {
+    if (item?.variants && item.variants.length > 0) {
+      setSelectedVariant(item.variants[0]);
+    } else {
+      setSelectedVariant(null);
+    }
+  }, [item]);
+
   if (!item) return null;
+
+  const hasVariants = item.variants && item.variants.length > 0;
+  const displayPrice = hasVariants && selectedVariant ? selectedVariant.price : item.price;
 
   const handleAddToCart = () => {
     if (onAddToCart) {
-      onAddToCart({ ...item, quantity: 1 });
+      onAddToCart({
+        ...item,
+        price: displayPrice,
+        quantity: 1,
+        ...(hasVariants && selectedVariant ? { variant: selectedVariant.label } : {}),
+      } as MenuItem & { quantity: number; variant?: string });
     }
     onClose();
   };
@@ -320,8 +382,33 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProp
               {/* Description */}
               <p className="text-[16px] text-[var(--text-secondary)] mb-6 leading-relaxed">{item.description}</p>
 
+              {/* Variant selector */}
+              {hasVariants && (
+                <div className="mb-6">
+                  <p className="text-[13px] font-semibold text-[var(--text-secondary)] mb-3 uppercase tracking-wide">Choose size</p>
+                  <div className="flex flex-wrap gap-3">
+                    {item.variants!.map(v => {
+                      const isSelected = selectedVariant?.label === v.label;
+                      return (
+                        <button
+                          key={v.label}
+                          onClick={() => setSelectedVariant(v)}
+                          className={`px-5 py-2.5 rounded-[35px] text-[15px] font-semibold border-2 transition-all duration-200 ${
+                            isSelected
+                              ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-md scale-[1.04]'
+                              : 'bg-transparent border-[var(--bg-card-border)] text-[var(--text-secondary)] hover:border-[var(--accent)]'
+                          }`}
+                        >
+                          {v.label} &nbsp;·&nbsp; AED {v.price}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Price */}
-              <p className="text-[32px] font-bold text-[var(--text-price)] mb-8">AED {item.price}</p>
+              <p className="text-[32px] font-bold text-[var(--text-price)] mb-8">AED {displayPrice}</p>
 
               {/* Add to Cart Button */}
               <button

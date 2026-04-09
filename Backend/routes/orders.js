@@ -26,6 +26,17 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 const RESTAURANT_LAT = 25.3908;
 const RESTAURANT_LNG = 55.4859;
 
+// Push order data to Google Sheets via Apps Script webhook (fire-and-forget)
+function pushToSheets(data) {
+  const url = process.env.SHEETS_WEBHOOK_URL;
+  if (!url) return; // silently skip if not configured
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).catch(err => console.error('[Sheets] Webhook failed:', err.message));
+}
+
 // Place new order
 router.post('/', async (req, res, next) => {
   try {
@@ -74,6 +85,20 @@ router.post('/', async (req, res, next) => {
     console.log(`📍 Customer: ${customerName}`);
     console.log(`📱 Phone: ${phone}`);
     console.log(`💰 Total: AED ${totalAmount}`);
+
+    // Push to Google Sheets (non-blocking)
+    pushToSheets({
+      timestamp: new Date().toLocaleString('en-AE', { timeZone: 'Asia/Dubai', hour12: true }),
+      orderNumber,
+      customerName,
+      phone,
+      email: email || '',
+      address,
+      items: items.map(i => `${i.quantity}× ${i.name}${i.variant ? ` (${i.variant})` : ''}`).join(' | '),
+      totalAmount: `AED ${totalAmount}`,
+      status: 'Pending',
+      notes: notes || '',
+    });
 
     // Fire off async email receipt
     if (email) {
@@ -191,6 +216,18 @@ router.put('/:orderNumber/status', requireAdmin, async (req, res, next) => {
     const updatedOrder = (await req.db.ref(`orders/${orderKey}`).once('value')).val();
     res.json(updatedOrder);
   } catch (error) {
+    next(error);
+  }
+});
+
+// Reset all orders (admin only)
+router.delete('/reset', requireAdmin, async (req, res, next) => {
+  try {
+    await req.db.ref('orders').remove();
+    console.log('🗑️ All orders wiped by admin');
+    res.json({ success: true, message: 'All orders deleted' });
+  } catch (error) {
+    console.error('❌ Order reset error:', error);
     next(error);
   }
 });
