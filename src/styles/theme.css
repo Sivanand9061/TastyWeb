@@ -124,9 +124,16 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    font-size: var(--font-size);
+    overflow-x: hidden; /* Prevent horizontal scroll/swipe shift on mobile */
+  }
+
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden; /* Prevent horizontal scroll/swipe shift on mobile */
   }
+
 
   /**
   * Default typography styles for HTML elements (h1-h4, p, label, button, input).
