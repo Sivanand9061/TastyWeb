@@ -5,7 +5,39 @@ import LoginSignupModal from "../Auth/LoginSignupModal";
 import { ref, get, set } from "firebase/database";
 import { db } from "../../firebase";
 import { toast } from "sonner";
-import { Trash2, Plus, AlertTriangle } from "lucide-react";
+import { Trash2, Plus, AlertTriangle, ImagePlus, X } from "lucide-react";
+
+// ─── Image helpers ────────────────────────────────────────────────
+const resizeImage = (file: File, maxWidth = 900): Promise<Blob> =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('Resize failed')), 'image/jpeg', 0.85);
+    };
+    img.onerror = () => reject(new Error('Load failed'));
+    img.src = url;
+  });
+
+const uploadToCloudinary = async (file: File): Promise<string> => {
+  const cloud = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const preset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+  if (!cloud || !preset) throw new Error('Cloudinary not configured');
+  const blob = await resizeImage(file);
+  const fd = new FormData();
+  fd.append('file', blob, 'menu-item.jpg');
+  fd.append('upload_preset', preset);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, { method: 'POST', body: fd });
+  if (!res.ok) throw new Error('Cloudinary upload failed');
+  const data = await res.json();
+  return data.secure_url as string;
+};
 
 interface MenuItem {
   id?: string;
@@ -42,6 +74,11 @@ export default function AdminAddItems() {
   // Settings state
   const [deliveryRadius, setDeliveryRadius] = useState<number>(20);
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // Image upload
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Danger zone
   const [resetConfirmText, setResetConfirmText] = useState("");
@@ -228,18 +265,30 @@ export default function AdminAddItems() {
     setLoading(true);
     try {
       const token = await getToken();
+
+      // Upload image to Cloudinary first (if selected)
+      let imageUrl: string | null = null;
+      if (imageFile) {
+        setUploadingImage(true);
+        imageUrl = await uploadToCloudinary(imageFile);
+        setUploadingImage(false);
+      }
+
       const res = await fetch(`${API_URL()}/api/menu`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, image: imageUrl }),
       });
       if (!res.ok) throw new Error('Failed to add item');
       const newItem = await res.json();
       setMessage({ type: "success", text: `✅ ${formData.name} added!` });
       setFormData({ name: "", description: "", price: "", category: categories[0] || "" });
+      setImageFile(null);
+      setImagePreview(null);
       setMenuItems(prev => [newItem, ...prev]);
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
+      setUploadingImage(false);
       setMessage({ type: "error", text: `❌ ${error instanceof Error ? error.message : 'Unknown error'}` });
     } finally {
       setLoading(false);
@@ -297,11 +346,47 @@ export default function AdminAddItems() {
                 {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
+
+            {/* Image Upload */}
+            <div className="mb-6">
+              <label className="block text-[15px] font-semibold text-[#1c1c1a] mb-2">Item Photo <span className="text-gray-400 font-normal">(optional)</span></label>
+              {imagePreview ? (
+                <div className="relative">
+                  <img src={imagePreview} alt="Preview" className="w-full h-[180px] object-cover rounded-[16px] border border-[#e0e0e0]" />
+                  <button
+                    type="button"
+                    onClick={() => { setImageFile(null); setImagePreview(null); }}
+                    className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-md hover:bg-red-50 transition-colors"
+                  >
+                    <X size={16} className="text-red-500" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center gap-2 w-full h-[140px] border-2 border-dashed border-[#d1d1d1] rounded-[16px] cursor-pointer hover:border-[#f51c27] transition-colors text-gray-400 hover:text-[#f51c27]">
+                  <ImagePlus size={32} />
+                  <span className="text-[14px] font-medium">Tap to pick a photo</span>
+                  <span className="text-[12px]">JPG, PNG, WEBP up to 10MB</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setImageFile(file);
+                        setImagePreview(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
             {message && (
               <div className={`mb-5 p-4 rounded-[12px] text-[15px] font-semibold ${message.type === 'success' ? 'bg-[#1caa00] text-white' : 'bg-[#ff4444] text-white'}`}>{message.text}</div>
             )}
-            <button type="submit" disabled={loading} className="w-full bg-[#f51c27] text-white py-3 rounded-[12px] text-[16px] font-bold hover:bg-[#d90429] transition-colors disabled:opacity-50">
-              {loading ? "Adding..." : "Add Item"}
+            <button type="submit" disabled={loading || uploadingImage} className="w-full bg-[#f51c27] text-white py-3 rounded-[12px] text-[16px] font-bold hover:bg-[#d90429] transition-colors disabled:opacity-50">
+              {uploadingImage ? "Uploading photo..." : loading ? "Adding..." : "Add Item"}
             </button>
           </form>
         </section>

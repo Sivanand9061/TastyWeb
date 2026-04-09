@@ -165,6 +165,7 @@ interface MenuItem {
   description: string;
   price: string;
   available?: boolean;
+  image?: string;
 }
 
 function MenuList({ categoryRefs, onItemClick, searchQuery, menuData, onAddToCart }: MenuListProps) {
@@ -242,7 +243,13 @@ function MenuList({ categoryRefs, onItemClick, searchQuery, menuData, onAddToCar
                     )}
                   </div>
                 </div>
-                <div className="w-[140px] h-[120px] bg-[#d0d0d0] rounded-[32px] flex-shrink-0"></div>
+                <div className="w-[120px] h-[110px] rounded-[24px] flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#ffe8e8] to-[#ffd0d0]">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>
+                  )}
+                </div>
               </div>
             </div>
             ))}
@@ -298,7 +305,13 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProp
 
             <div className="px-6 pb-8">
               {/* Large Image */}
-              <div className="w-full h-[280px] bg-[#d0d0d0] rounded-[32px] mb-6"></div>
+              <div className="w-full h-[260px] rounded-[28px] overflow-hidden bg-gradient-to-br from-[#ffe8e8] to-[#ffd0d0] mb-6">
+                {item.image ? (
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-7xl">🍽️</div>
+                )}
+              </div>
 
               {/* Product Name */}
               <h2 className="text-[28px] font-bold text-[#1c1c1a] mb-3">{item.name}</h2>
