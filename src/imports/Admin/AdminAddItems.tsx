@@ -5,7 +5,8 @@ import LoginSignupModal from "../Auth/LoginSignupModal";
 import { ref, get, set } from "firebase/database";
 import { db } from "../../firebase";
 import { toast } from "sonner";
-import { Trash2, Plus, AlertTriangle, ImagePlus, X } from "lucide-react";
+import { Trash2, Plus, AlertTriangle, ImagePlus, X, Palette } from "lucide-react";
+import { themes, getThemeById, applyTheme, DEFAULT_THEME } from "../../themes";
 
 // ─── Image helpers ────────────────────────────────────────────────
 const resizeImage = (file: File, maxWidth = 900): Promise<Blob> =>
@@ -78,7 +79,7 @@ export default function AdminAddItems() {
   const [fetchingMenu, setFetchingMenu] = useState(true);
 
   // Category state
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [savingCategory, setSavingCategory] = useState(false);
   const [confirmDeleteCategory, setConfirmDeleteCategory] = useState<string | null>(null);
@@ -98,14 +99,19 @@ export default function AdminAddItems() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Theme
+  const [activeTheme, setActiveTheme] = useState(DEFAULT_THEME);
+  const [switchingTheme, setSwitchingTheme] = useState(false);
+
   // Load everything on mount
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [menuRes, radSnap, catSnap] = await Promise.all([
+        const [menuRes, radSnap, catSnap, themeSnap] = await Promise.all([
           fetch(`${API_URL()}/api/menu`),
           get(ref(db, 'settings/deliveryRadiusKm')),
           get(ref(db, 'settings/categories')),
+          get(ref(db, 'settings/activeTheme')),
         ]);
 
         if (menuRes.ok) {
@@ -117,6 +123,7 @@ export default function AdminAddItems() {
           const saved = catSnap.val();
           setCategories(Array.isArray(saved) ? saved : DEFAULT_CATEGORIES);
         }
+        if (themeSnap.exists()) setActiveTheme(themeSnap.val());
       } catch (err) {
         console.error("Failed to load admin data:", err);
       } finally {
@@ -126,10 +133,16 @@ export default function AdminAddItems() {
     fetchAll();
   }, []);
 
-  // Set default category when categories load
+  // Sync form category to first available category whenever categories change
   useEffect(() => {
-    if (categories.length > 0 && !formData.category) {
-      setFormData(prev => ({ ...prev, category: categories[0] }));
+    if (categories.length > 0) {
+      setFormData(prev => {
+        // If current category isn't in the list, reset to first
+        if (!categories.includes(prev.category)) {
+          return { ...prev, category: categories[0] };
+        }
+        return prev;
+      });
     }
   }, [categories]);
 
@@ -457,6 +470,62 @@ export default function AdminAddItems() {
                 {savingSettings ? "Saving..." : "Save"}
               </button>
             </div>
+          </div>
+        </section>
+
+        {/* ── THEME PICKER ── */}
+        <section>
+          <div className="flex items-center gap-3 mb-5">
+            <Palette size={24} className="text-[#1c1c1a]" />
+            <h2 className="text-[28px] font-black text-[#1c1c1a]">Site Theme</h2>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">Switch your restaurant's look instantly. Customers see the change in real time.</p>
+          <div className="grid grid-cols-3 gap-3">
+            {themes.map(theme => {
+              const isActive = activeTheme === theme.id;
+              const colors = theme.colors;
+              return (
+                <button
+                  key={theme.id}
+                  disabled={switchingTheme}
+                  onClick={async () => {
+                    setSwitchingTheme(true);
+                    try {
+                      await set(ref(db, 'settings/activeTheme'), theme.id);
+                      setActiveTheme(theme.id);
+                      applyTheme(theme.id);
+                      toast.success(`Switched to ${theme.name}`);
+                    } catch {
+                      toast.error('Failed to switch theme');
+                    } finally {
+                      setSwitchingTheme(false);
+                    }
+                  }}
+                  className={`relative rounded-[16px] p-3 border-2 transition-all ${
+                    isActive ? 'border-[#f51c27] shadow-lg scale-[1.02]' : 'border-[#e0e0e0] hover:border-gray-400'
+                  } disabled:opacity-60`}
+                >
+                  {/* Mini preview */}
+                  <div
+                    className="rounded-[10px] h-[80px] mb-2 flex flex-col items-center justify-center gap-1 overflow-hidden"
+                    style={{ background: colors['--bg-primary'] }}
+                  >
+                    <div className="text-[18px] font-black" style={{ color: colors['--accent'] }}>Tasty</div>
+                    <div className="flex gap-1">
+                      <div className="w-6 h-3 rounded-full" style={{ background: colors['--accent'] }} />
+                      <div className="w-6 h-3 rounded-full" style={{ background: colors['--text-price'] }} />
+                      <div className="w-6 h-3 rounded-full" style={{ background: colors['--category-underline'] }} />
+                    </div>
+                  </div>
+                  <span className="text-[12px] font-bold text-[#1c1c1a] block">{theme.emoji} {theme.name}</span>
+                  {isActive && (
+                    <div className="absolute top-1.5 right-1.5 bg-[#1caa00] rounded-full w-5 h-5 flex items-center justify-center">
+                      <span className="text-white text-[11px]">✓</span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </section>
 

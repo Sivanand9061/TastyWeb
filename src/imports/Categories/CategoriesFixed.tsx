@@ -11,17 +11,17 @@ const DEFAULT_CATEGORIES = ["Pizza", "Burgers", "Pasta", "Desserts", "Drinks", "
 
 function TopBar({ onBackHome, cartItemsCount = 0, onNavigateToCart }: { onBackHome?: () => void; cartItemsCount?: number; onNavigateToCart?: () => void }) {
   return (
-    <div className="sticky top-0 z-50 bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] mx-4 mt-5 mb-4 h-[70px]">
+    <div className="sticky top-0 z-50 bg-[var(--topbar-bg)] backdrop-blur-sm shadow-[var(--topbar-shadow)] rounded-[35px] mx-4 mt-5 mb-4 h-[70px]">
       <div className="flex items-center justify-between px-6 py-3 max-w-[1280px] mx-auto">
         <button onClick={onBackHome} className="w-[46px] h-[46px] relative hover:opacity-80 transition-opacity">
           <img alt="Tasty Hot Logo" className="w-full h-full object-cover" src={imgLogoPng} />
         </button>
         <button onClick={onNavigateToCart} className="relative hover:opacity-80 transition-opacity">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 19.9815 20">
-            <path d={svgPaths.pb5c2400} fill="#1C1C1A" />
+            <path d={svgPaths.pb5c2400} fill="var(--text-primary)" />
           </svg>
           {cartItemsCount > 0 && (
-            <div className="absolute -top-1 -right-1 bg-[#d90429] rounded-full w-4 h-4 flex items-center justify-center">
+            <div className="absolute -top-1 -right-1 bg-[var(--accent-hover)] rounded-full w-4 h-4 flex items-center justify-center">
               <span className="text-white text-[10px] font-bold leading-none">{cartItemsCount}</span>
             </div>
           )}
@@ -34,7 +34,7 @@ function TopBar({ onBackHome, cartItemsCount = 0, onNavigateToCart }: { onBackHo
 function HeroSection() {
   return (
     <div className="text-center py-6">
-      <h1 className="text-[56px] font-black text-[#f51c27] leading-tight">Tasty Hot</h1>
+      <h1 className="text-[56px] font-black text-[var(--accent)] leading-tight">Tasty Hot</h1>
     </div>
   );
 }
@@ -42,7 +42,7 @@ function HeroSection() {
 function InfoCard() {
   return (
     <div className="mx-4 mb-6">
-      <div className="border border-[#d1d1d1] rounded-[22px] p-4">
+      <div className="border border-[var(--info-border)] rounded-[22px] p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1">
             <div className="w-4 h-4">
@@ -79,11 +79,11 @@ function SearchBar({ value, onChange }: SearchBarProps) {
           placeholder="Search"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full h-[51px] px-12 border border-[#d1d1d1] rounded-[32px] text-[#727272] text-[21px] placeholder:text-[#727272] focus:outline-none focus:border-[#f51c27]"
+          className="w-full h-[51px] px-12 border border-[var(--bg-input-border)] rounded-[32px] text-[var(--text-secondary)] text-[21px] placeholder:text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)] bg-transparent"
         />
         <div className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px]">
           <svg className="w-full h-full" fill="none" viewBox="0 0 18 18">
-            <path d={svgPaths.p8a35e00} fill="#1C1C1A" />
+            <path d={svgPaths.p8a35e00} fill="var(--text-primary)" />
           </svg>
         </div>
       </div>
@@ -133,7 +133,7 @@ function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
   }, [activeCategory, categories]);
 
   return (
-    <div className="sticky top-[105px] z-40 bg-[#fbf4e8] border-t border-b border-[#c1c1c1] py-3 mb-6">
+    <div className="sticky top-[105px] z-40 bg-[var(--bg-primary)] border-t border-b border-[var(--item-border)] py-3 mb-6">
       <div className="px-4">
         <div ref={containerRef} className="flex items-center gap-6 overflow-x-auto scrollbar-hide relative">
           {categories.map((category, index) => (
@@ -145,8 +145,8 @@ function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
               onClick={() => handleCategoryClick(index)}
               className={`whitespace-nowrap transition-all ${
                 activeCategory === index
-                  ? "text-[#727272] text-[21px] font-medium"
-                  : "text-[#727272] text-[15.5px] opacity-50 hover:opacity-75"
+                  ? "text-[var(--text-secondary)] text-[21px] font-medium"
+                  : "text-[var(--text-secondary)] text-[15.5px] opacity-50 hover:opacity-75"
               }`}
             >
               {category}
@@ -154,7 +154,7 @@ function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
           ))}
         </div>
         <div 
-          className="h-1 bg-[#626262] rounded mt-3 transition-all duration-300 ease-out"
+          className="h-1 bg-[var(--category-underline)] rounded mt-3 transition-all duration-300 ease-out"
           style={{ width: `${underlineStyle.width}px`, transform: `translateX(${underlineStyle.left}px)` }}
         ></div>
       </div>
@@ -222,11 +222,11 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
         const categoryIndex = categories.indexOf(category);
         return (
           <div key={category} ref={categoryRefs[categoryIndex]} className="scroll-mt-[140px]">
-            <h2 className="text-[24px] font-bold text-[#1c1c1a] mb-6 mt-8">{category}</h2>
+            <h2 className="text-[24px] font-bold text-[var(--text-primary)] mb-6 mt-8">{category}</h2>
             {filtered[category as keyof typeof filtered].map((item, itemIndex) => (
             <div 
               key={itemIndex} 
-              className={`pb-9 mb-9 border-b border-[#d0d0d0] ${item.available !== false ? 'cursor-pointer hover:bg-gray-50' : 'opacity-60 grayscale-[50%]'} -mx-4 px-4 rounded-lg transition-colors`}
+              className={`pb-9 mb-9 border-b border-[var(--item-border)] ${item.available !== false ? 'cursor-pointer' : 'opacity-60 grayscale-[50%]'} -mx-4 px-4 rounded-lg transition-colors`}
               onClick={() => {
                 if (item.available !== false) onItemClick(item);
               }}
@@ -236,7 +236,7 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
                   <h3 className="text-[15.5px] font-semibold mb-2">{item.name}</h3>
                   <p className="text-[12.8px] text-gray-700 mb-6">{item.description}</p>
                   <div className="flex items-center justify-between mt-auto">
-                    <p className={`text-[15.5px] font-semibold ${item.available === false ? 'text-gray-400' : 'text-[#1caa00]'}`}>
+                    <p className={`text-[15.5px] font-semibold ${item.available === false ? 'text-gray-400' : 'text-[var(--text-price)]'}`}>
                       {item.price}
                     </p>
                     {item.available === false ? (
@@ -246,14 +246,14 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
                     ) : (
                       <button
                         onClick={(e) => handleAddToCart(e, item)}
-                        className="bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] px-4 py-2 text-[12px] font-medium text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all"
+                        className="bg-[var(--btn-add-bg)] backdrop-blur-sm shadow-[var(--topbar-shadow)] rounded-[35px] px-4 py-2 text-[12px] font-medium text-[var(--accent)] hover:bg-[var(--btn-add-hover)] transition-all"
                       >
                         Add
                       </button>
                     )}
                   </div>
                 </div>
-                <div className="w-[120px] h-[110px] rounded-[24px] flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#ffe8e8] to-[#ffd0d0]">
+                <div className="w-[120px] h-[110px] rounded-[24px] flex-shrink-0 overflow-hidden bg-gradient-to-br from-[var(--img-placeholder-from)] to-[var(--img-placeholder-to)]">
                   {item.image ? (
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                   ) : (
@@ -315,7 +315,7 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProp
 
             <div className="px-6 pb-8">
               {/* Large Image */}
-              <div className="w-full h-[260px] rounded-[28px] overflow-hidden bg-gradient-to-br from-[#ffe8e8] to-[#ffd0d0] mb-6">
+              <div className="w-full h-[260px] rounded-[28px] overflow-hidden bg-gradient-to-br from-[var(--img-placeholder-from)] to-[var(--img-placeholder-to)] mb-6">
                 {item.image ? (
                   <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                 ) : (
@@ -324,18 +324,18 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProp
               </div>
 
               {/* Product Name */}
-              <h2 className="text-[28px] font-bold text-[#1c1c1a] mb-3">{item.name}</h2>
+              <h2 className="text-[28px] font-bold text-[var(--text-primary)] mb-3">{item.name}</h2>
 
               {/* Description */}
-              <p className="text-[16px] text-gray-700 mb-6 leading-relaxed">{item.description}</p>
+              <p className="text-[16px] text-[var(--text-secondary)] mb-6 leading-relaxed">{item.description}</p>
 
               {/* Price */}
-              <p className="text-[32px] font-bold text-[#1caa00] mb-8">{item.price}</p>
+              <p className="text-[32px] font-bold text-[var(--text-price)] mb-8">{item.price}</p>
 
               {/* Add to Cart Button */}
               <button
                 onClick={handleAddToCart}
-                className="w-full bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] py-4 text-[18px] font-semibold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all"
+                className="w-full bg-[var(--btn-add-bg)] backdrop-blur-sm shadow-[var(--topbar-shadow)] rounded-[35px] py-4 text-[18px] font-semibold text-[var(--accent)] hover:bg-[var(--btn-add-hover)] transition-all"
               >
                 Add to Cart
               </button>
@@ -509,7 +509,7 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
   };
 
   return (
-    <div className="min-h-screen bg-[#fbf4e8] flex flex-col">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
       <TopBar onBackHome={onBackHome} cartItemsCount={cartItemsCount} onNavigateToCart={onNavigateToCart} />
       <div className="flex-1">
         <HeroSection />
@@ -526,7 +526,7 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#1caa00] text-white px-6 py-4 rounded-[35px] shadow-lg z-50 font-medium"
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--toast-bg)] text-white px-6 py-4 rounded-[35px] shadow-lg z-50 font-medium"
         >
           {toastMessage}
         </motion.div>
