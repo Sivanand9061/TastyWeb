@@ -1,15 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Fix UI Issues</title>
-    </head>
+    <!-- Primary SEO -->
+    <title>Tasty Hot — Order Fresh Food Online | Al Rawda, Ajman</title>
+    <meta name="description" content="Order delicious shawarma, burgers, pizza, pasta and more from Tasty Hot restaurant in Al Rawda, Ajman. Fast delivery straight to your door. Order online now!" />
+    <meta name="keywords" content="Tasty Hot, Al Rawda Ajman, food delivery Ajman, shawarma Ajman, burger Ajman, order food online, restaurant Ajman UAE" />
+    <meta name="author" content="Tasty Hot Restaurant" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://tasty-web.vercel.app" />
 
-    <body>
-      <div id="root"></div>
-      <script type="module" src="/src/main.tsx"></script>
-    </body>
-  </html>
-  
+    <!-- Theme color (browser toolbar & mobile status bar) -->
+    <meta name="theme-color" content="#f51c27" />
+
+    <!-- Open Graph (WhatsApp, Facebook, Telegram previews) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Tasty Hot" />
+    <meta property="og:title" content="Tasty Hot — Fresh Food Delivered in Ajman" />
+    <meta property="og:description" content="Shawarma, burgers, pizza & more. Order online from Tasty Hot, Al Rawda, Ajman. Fast delivery to your door!" />
+    <meta property="og:image" content="https://tasty-web.vercel.app/images/hero.jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="https://tasty-web.vercel.app" />
+    <meta property="og:locale" content="en_AE" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Tasty Hot — Fresh Food Delivered in Ajman" />
+    <meta name="twitter:description" content="Order shawarma, burgers, pizza & more from Tasty Hot, Al Rawda, Ajman." />
+    <meta name="twitter:image" content="https://tasty-web.vercel.app/images/hero.jpeg" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/images/hero.jpeg" />
+
+    <!-- Google Structured Data (Restaurant Business) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Restaurant",
+      "name": "Tasty Hot",
+      "description": "Fast food restaurant specializing in shawarma, burgers, pizza and pasta.",
+      "url": "https://tasty-web.vercel.app",
+      "telephone": "+97106-749-4505",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Near Al Hamdiya Police Station, Opp. KENZ Hyper Market, Al Rawda 1",
+        "addressLocality": "Ajman",
+        "addressCountry": "AE"
+      },
+      "servesCuisine": ["Shawarma", "Burgers", "Pizza", "Pasta"],
+      "priceRange": "$$",
+      "openingHours": "Mo-Su 09:00-23:00",
+      "image": "https://tasty-web.vercel.app/images/hero.jpeg",
+      "hasMenu": "https://tasty-web.vercel.app",
+      "potentialAction": {
+        "@type": "OrderAction",
+        "target": "https://tasty-web.vercel.app"
+      }
+    }
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

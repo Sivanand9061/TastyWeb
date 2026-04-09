@@ -786,7 +786,6 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
 
       <LoginSignupModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
 
-      <Footer />
       </div>
     </div>
   );
