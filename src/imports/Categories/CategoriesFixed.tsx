@@ -237,7 +237,7 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
                   <p className="text-[12.8px] text-gray-700 mb-6">{item.description}</p>
                   <div className="flex items-center justify-between mt-auto">
                     <p className={`text-[15.5px] font-semibold ${item.available === false ? 'text-gray-400' : 'text-[var(--text-price)]'}`}>
-                      {item.price}
+                      AED {item.price}
                     </p>
                     {item.available === false ? (
                       <span className="text-red-500 text-[12px] font-bold px-4 py-2 border border-red-500 rounded-[35px]">
@@ -330,7 +330,7 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProp
               <p className="text-[16px] text-[var(--text-secondary)] mb-6 leading-relaxed">{item.description}</p>
 
               {/* Price */}
-              <p className="text-[32px] font-bold text-[var(--text-price)] mb-8">{item.price}</p>
+              <p className="text-[32px] font-bold text-[var(--text-price)] mb-8">AED {item.price}</p>
 
               {/* Add to Cart Button */}
               <button
