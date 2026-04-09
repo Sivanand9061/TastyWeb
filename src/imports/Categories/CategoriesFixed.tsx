@@ -360,9 +360,13 @@ function Footer() {
           </div>
 
           {/* Brand */}
-          <div className="text-center mb-2">
-            <h2 className="text-[28px] font-bold mb-1">Tasty Hot</h2>
-            <p className="text-[9px] font-medium">Restaurant & Cafeteria</p>
+          <div className="flex justify-center mb-2">
+            <img
+              src="/images/footerth.png"
+              alt="Tasty Hot"
+              className="h-[220px] w-auto object-contain"
+              style={{ filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.35))' }}
+            />
           </div>
 
           {/* Address */}
@@ -428,41 +432,77 @@ function Footer() {
 }
 
 export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0, onNavigateToCart }: { onBackHome?: () => void; onAddToCart?: (item: MenuItem & { quantity: number }) => void; cartItemsCount?: number; onNavigateToCart?: () => void }) {
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
-  const [menuData, setMenuData] = useState<Record<string, MenuItem[]>>({});
-  const [loading, setLoading] = useState(true);
+  const CACHE_CATS_KEY = 'tasty_categories_v1';
+  const CACHE_MENU_KEY = 'tasty_menu_v1';
+
+  // Restore from cache immediately so the page renders without waiting for the network
+  const getCachedCategories = (): string[] => {
+    try {
+      const raw = localStorage.getItem(CACHE_CATS_KEY);
+      if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed) && parsed.length > 0) return parsed; }
+    } catch {}
+    return DEFAULT_CATEGORIES;
+  };
+
+  const buildOrganized = (cats: string[], items: (MenuItem & { category: string })[]): Record<string, MenuItem[]> => {
+    const organized: Record<string, MenuItem[]> = {};
+    cats.forEach(cat => { organized[cat] = []; });
+    items.forEach(item => {
+      if (!organized[item.category]) organized[item.category] = [];
+      organized[item.category].push(item);
+    });
+    return organized;
+  };
+
+  const getCachedMenuData = (cats: string[]): Record<string, MenuItem[]> | null => {
+    try {
+      const raw = localStorage.getItem(CACHE_MENU_KEY);
+      if (raw) {
+        const items = JSON.parse(raw) as (MenuItem & { category: string })[];
+        if (Array.isArray(items) && items.length > 0) return buildOrganized(cats, items);
+      }
+    } catch {}
+    return null;
+  };
+
+  const cachedCats = getCachedCategories();
+  const cachedMenu = getCachedMenuData(cachedCats);
+
+  const [categories, setCategories] = useState<string[]>(cachedCats);
+  const [menuData, setMenuData] = useState<Record<string, MenuItem[]>>(cachedMenu ?? {});
+  // Only show loading spinner if there is no cached data yet (true first-time visitor)
+  const [loading, setLoading] = useState<boolean>(cachedMenu === null);
   const categoryRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Fetch categories from Firebase + menu items from API
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        // Fetch categories from Firebase
-        const catSnap = await get(ref(db, 'settings/categories'));
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+        // Fetch both sources in parallel
+        const [catSnap, response] = await Promise.all([
+          get(ref(db, 'settings/categories')),
+          fetch(`${apiUrl}/api/menu`),
+        ]);
+
+        // Resolve categories
         let cats = DEFAULT_CATEGORIES;
         if (catSnap.exists()) {
           const saved = catSnap.val();
           if (Array.isArray(saved) && saved.length > 0) cats = saved;
         }
+
+        // Resolve menu items
+        const items: (MenuItem & { category: string })[] = await response.json();
+        const organized = buildOrganized(cats, Array.isArray(items) ? items : []);
+
+        // Update UI (background refresh — user may already be browsing cached data)
         setCategories(cats);
-
-        // Fetch menu items from API
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const response = await fetch(`${apiUrl}/api/menu`);
-        const items = await response.json();
-
-        // Build organized object dynamically based on saved categories
-        const organized: Record<string, MenuItem[]> = {};
-        cats.forEach(cat => { organized[cat] = []; });
-
-        if (items && items.length > 0) {
-          items.forEach((item: MenuItem & { category: string }) => {
-            if (!organized[item.category]) organized[item.category] = [];
-            organized[item.category].push(item);
-          });
-        }
-
         setMenuData(organized);
+
+        // Persist fresh data to cache
+        localStorage.setItem(CACHE_CATS_KEY, JSON.stringify(cats));
+        localStorage.setItem(CACHE_MENU_KEY, JSON.stringify(items));
       } catch (error) {
         console.error('Failed to fetch menu:', error);
       } finally {
@@ -516,7 +556,31 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
         <InfoCard />
         <CategoryTabs categories={categories} onCategoryClick={handleCategoryClick} />
-        <MenuList categories={categories} categoryRefs={categoryRefs.current.map((r, i) => ({ current: r }) as React.RefObject<HTMLDivElement>)} onItemClick={openProductDetail} searchQuery={searchQuery} menuData={menuData} onAddToCart={handleAddItemToCart} />
+
+        {/* Skeleton — only shown to true first-time visitors with no cache */}
+        {loading ? (
+          <div className="px-4 pb-20">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="mb-10">
+                {/* Category heading skeleton */}
+                <div className="h-6 w-32 bg-gray-200 rounded-full mb-6 mt-8 animate-pulse" />
+                {[1, 2].map(j => (
+                  <div key={j} className="flex gap-4 pb-9 mb-9 border-b border-[var(--item-border)]">
+                    <div className="flex-1 space-y-3">
+                      <div className="h-4 w-3/4 bg-gray-200 rounded-full animate-pulse" />
+                      <div className="h-3 w-full bg-gray-100 rounded-full animate-pulse" />
+                      <div className="h-3 w-2/3 bg-gray-100 rounded-full animate-pulse" />
+                      <div className="h-4 w-16 bg-gray-200 rounded-full animate-pulse mt-4" />
+                    </div>
+                    <div className="w-[120px] h-[110px] rounded-[24px] bg-gray-200 animate-pulse flex-shrink-0" />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <MenuList categories={categories} categoryRefs={categoryRefs.current.map((r) => ({ current: r }) as React.RefObject<HTMLDivElement>)} onItemClick={openProductDetail} searchQuery={searchQuery} menuData={menuData} onAddToCart={handleAddItemToCart} />
+        )}
       </div>
       <ProductDetail item={selectedItem} isOpen={isProductDetailOpen} onClose={closeProductDetail} onAddToCart={handleAddItemToCart} />
       

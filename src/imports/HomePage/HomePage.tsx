@@ -240,9 +240,14 @@ function Footer() {
             </div>
           </div>
 
-          <div className="text-center mb-2">
-            <h2 className="text-[28px] font-bold mb-1">Tasty Hot</h2>
-            <p className="text-[9px] font-medium">Restaurant & Cafeteria</p>
+          {/* Brand */}
+          <div className="flex justify-center mb-2">
+            <img
+              src="/images/footerth.png"
+              alt="Tasty Hot"
+              className="h-[220px] w-auto object-contain"
+              style={{ filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.35))' }}
+            />
           </div>
 
           <div className="text-center mb-8">
