@@ -6,10 +6,16 @@ const admin = require('firebase-admin');
 const app = express();
 
 // Middleware
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? (process.env.FRONTEND_URL || '').split(',').map(o => o.trim()).filter(Boolean)
+  : true; // Allow all in development
+
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? (process.env.FRONTEND_URL || true)   // Set FRONTEND_URL=https://your-app.vercel.app on Render
-    : true,                                 // Allow all origins in development
+  origin: (origin, callback) => {
+    if (allowedOrigins === true || !origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin "${origin}" not allowed`));
+  },
   credentials: true,
 };
 app.use(cors(corsOptions));
