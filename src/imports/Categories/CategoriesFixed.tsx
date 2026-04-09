@@ -4,6 +4,10 @@ import imgWhatsApp from "./ed00f9add7cd5cb0ff88532464058a5e59bc4497.png";
 import imgImage1 from "./99fddedb4828ce247ec845e7f4b3ade3c1715928.png";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { ref, get } from "firebase/database";
+import { db } from "../../firebase";
+
+const DEFAULT_CATEGORIES = ["Pizza", "Burgers", "Pasta", "Desserts", "Drinks", "Salads"];
 
 function TopBar({ onBackHome, cartItemsCount = 0, onNavigateToCart }: { onBackHome?: () => void; cartItemsCount?: number; onNavigateToCart?: () => void }) {
   return (
@@ -88,39 +92,45 @@ function SearchBar({ value, onChange }: SearchBarProps) {
 }
 
 interface CategoryTabsProps {
+  categories: string[];
   onCategoryClick: (index: number) => void;
 }
 
-function CategoryTabs({ onCategoryClick }: CategoryTabsProps) {
+function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
   const [activeCategory, setActiveCategory] = useState(0);
   const [underlineStyle, setUnderlineStyle] = useState({ width: 0, left: 0 });
-  const categories = ["Pizza", "Burgers", "Pasta", "Desserts", "Drinks", "Salads"];
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const handleCategoryClick = (index: number) => {
     setActiveCategory(index);
     onCategoryClick(index);
-    updateUnderline(index);
+    // Scroll the tab into view
+    const btn = buttonRefs.current[index];
+    btn?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    // Delay underline update to let scroll finish
+    setTimeout(() => updateUnderline(index), 320);
   };
 
   const updateUnderline = (index: number) => {
     const button = buttonRefs.current[index];
-    if (button && containerRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
+    const container = containerRef.current;
+    if (button && container) {
+      const containerRect = container.getBoundingClientRect();
       const buttonRect = button.getBoundingClientRect();
       setUnderlineStyle({
         width: buttonRect.width,
-        left: buttonRect.left - containerRect.left,
+        left: buttonRect.left - containerRect.left + container.scrollLeft,
       });
     }
   };
 
   useEffect(() => {
     updateUnderline(activeCategory);
-    window.addEventListener('resize', () => updateUnderline(activeCategory));
-    return () => window.removeEventListener('resize', () => updateUnderline(activeCategory));
-  }, [activeCategory]);
+    const handleResize = () => updateUnderline(activeCategory);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [activeCategory, categories]);
 
   return (
     <div className="sticky top-[105px] z-40 bg-[#fbf4e8] border-t border-b border-[#c1c1c1] py-3 mb-6">
@@ -128,7 +138,7 @@ function CategoryTabs({ onCategoryClick }: CategoryTabsProps) {
         <div ref={containerRef} className="flex items-center gap-6 overflow-x-auto scrollbar-hide relative">
           {categories.map((category, index) => (
             <button
-              key={index}
+              key={category}
               ref={(el) => {
                 buttonRefs.current[index] = el;
               }}
@@ -153,6 +163,7 @@ function CategoryTabs({ onCategoryClick }: CategoryTabsProps) {
 }
 
 interface MenuListProps {
+  categories: string[];
   categoryRefs: React.RefObject<HTMLDivElement>[];
   onItemClick: (item: MenuItem) => void;
   searchQuery: string;
@@ -168,8 +179,7 @@ interface MenuItem {
   image?: string;
 }
 
-function MenuList({ categoryRefs, onItemClick, searchQuery, menuData, onAddToCart }: MenuListProps) {
-  const categories = ["Pizza", "Burgers", "Pasta", "Desserts", "Drinks", "Salads"];
+function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData, onAddToCart }: MenuListProps) {
   
   const filteredMenuData = () => {
     if (!searchQuery.trim()) return menuData;
@@ -418,55 +428,56 @@ function Footer() {
 }
 
 export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0, onNavigateToCart }: { onBackHome?: () => void; onAddToCart?: (item: MenuItem & { quantity: number }) => void; cartItemsCount?: number; onNavigateToCart?: () => void }) {
-  const categories = ["Pizza", "Burgers", "Pasta", "Desserts", "Drinks", "Salads"];
-  const categoryRefs = categories.map(() => useRef<HTMLDivElement>(null));
-  
-  const [menuData, setMenuData] = useState<Record<string, MenuItem[]>>({
-    Pizza: [], Burgers: [], Pasta: [], Desserts: [], Drinks: [], Salads: []
-  });
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [menuData, setMenuData] = useState<Record<string, MenuItem[]>>({});
   const [loading, setLoading] = useState(true);
+  const categoryRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Fetch menu from backend ONLY
+  // Fetch categories from Firebase + menu items from API
   useEffect(() => {
-    const fetchMenu = async () => {
+    const fetchAll = async () => {
       try {
+        // Fetch categories from Firebase
+        const catSnap = await get(ref(db, 'settings/categories'));
+        let cats = DEFAULT_CATEGORIES;
+        if (catSnap.exists()) {
+          const saved = catSnap.val();
+          if (Array.isArray(saved) && saved.length > 0) cats = saved;
+        }
+        setCategories(cats);
+
+        // Fetch menu items from API
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         const response = await fetch(`${apiUrl}/api/menu`);
         const items = await response.json();
 
+        // Build organized object dynamically based on saved categories
+        const organized: Record<string, MenuItem[]> = {};
+        cats.forEach(cat => { organized[cat] = []; });
+
         if (items && items.length > 0) {
-          // Organize items by category
-          const organized: Record<string, MenuItem[]> = {
-            Pizza: [], Burgers: [], Pasta: [], Desserts: [], Drinks: [], Salads: []
-          };
-
           items.forEach((item: MenuItem & { category: string }) => {
-            if (organized[item.category]) {
-              organized[item.category].push(item);
-            }
+            if (!organized[item.category]) organized[item.category] = [];
+            organized[item.category].push(item);
           });
-
-          setMenuData(organized);
         }
-        setLoading(false);
+
+        setMenuData(organized);
       } catch (error) {
         console.error('Failed to fetch menu:', error);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchMenu();
+    fetchAll();
   }, []);
 
   const handleCategoryClick = (index: number) => {
-    categoryRefs[index].current?.scrollIntoView({ 
+    categoryRefs.current[index]?.scrollIntoView({ 
       behavior: 'smooth',
       block: 'start'
     });
-  };
-
-  const handleItemClick = (item: MenuItem) => {
-    console.log("Item clicked:", item.name);
   };
 
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
@@ -488,9 +499,13 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
     if (onAddToCart) {
       onAddToCart(item);
     }
-    // Show success message
     setToastMessage(`${item.name} added to cart!`);
     setTimeout(() => setToastMessage(null), 2000);
+  };
+
+  // Build refs array for categories
+  const setCategoryRef = (index: number) => (el: HTMLDivElement | null) => {
+    categoryRefs.current[index] = el;
   };
 
   return (
@@ -500,8 +515,8 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
         <HeroSection />
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
         <InfoCard />
-        <CategoryTabs onCategoryClick={handleCategoryClick} />
-        <MenuList categoryRefs={categoryRefs} onItemClick={openProductDetail} searchQuery={searchQuery} menuData={menuData} onAddToCart={handleAddItemToCart} />
+        <CategoryTabs categories={categories} onCategoryClick={handleCategoryClick} />
+        <MenuList categories={categories} categoryRefs={categoryRefs.current.map((r, i) => ({ current: r }) as React.RefObject<HTMLDivElement>)} onItemClick={openProductDetail} searchQuery={searchQuery} menuData={menuData} onAddToCart={handleAddItemToCart} />
       </div>
       <ProductDetail item={selectedItem} isOpen={isProductDetailOpen} onClose={closeProductDetail} onAddToCart={handleAddItemToCart} />
       
