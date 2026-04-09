@@ -5,7 +5,7 @@ import LoginSignupModal from "../Auth/LoginSignupModal";
 import { ref, get, set } from "firebase/database";
 import { db } from "../../firebase";
 import { toast } from "sonner";
-import { Trash2, Plus, AlertTriangle, ImagePlus, X, Palette } from "lucide-react";
+import { Trash2, Plus, AlertTriangle, ImagePlus, X, Palette, Pencil } from "lucide-react";
 import { themes, getThemeById, applyTheme, DEFAULT_THEME } from "../../themes";
 
 // ─── Image helpers ────────────────────────────────────────────────
@@ -59,6 +59,7 @@ interface MenuItem {
   price: string;
   category: string;
   available?: boolean;
+  image?: string;
 }
 
 const DEFAULT_CATEGORIES = ["Pizza", "Burgers", "Pasta", "Desserts", "Drinks", "Salads"];
@@ -102,6 +103,13 @@ export default function AdminAddItems() {
   // Theme
   const [activeTheme, setActiveTheme] = useState(DEFAULT_THEME);
   const [switchingTheme, setSwitchingTheme] = useState(false);
+
+  // Edit item
+  const [editItem, setEditItem] = useState<MenuItem | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "", price: "", category: "" });
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Load everything on mount
   useEffect(() => {
@@ -561,7 +569,7 @@ export default function AdminAddItems() {
                     <h3 className="font-bold text-[17px] text-[#1c1c1a] truncate">{item.name}</h3>
                     <p className="text-gray-500 text-[13px]">AED {item.price} · {item.category}</p>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <span className={`text-[12px] font-bold ${item.available !== false ? 'text-green-500' : 'text-red-500'}`}>
                       {item.available !== false ? 'IN STOCK' : 'OUT'}
                     </span>
@@ -570,6 +578,18 @@ export default function AdminAddItems() {
                       className={`w-12 h-7 rounded-full transition-colors relative ${item.available !== false ? 'bg-green-500' : 'bg-gray-300'}`}
                     >
                       <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${item.available !== false ? 'right-1' : 'left-1'}`} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditItem(item);
+                        setEditForm({ name: item.name, description: item.description, price: item.price, category: item.category || categories[0] || "" });
+                        setEditImagePreview(item.image || null);
+                        setEditImageFile(null);
+                      }}
+                      className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit item"
+                    >
+                      <Pencil size={18} />
                     </button>
                     <button
                       onClick={() => deleteItem(item)}
@@ -589,6 +609,100 @@ export default function AdminAddItems() {
         {/* Bottom padding */}
         <div className="h-24" />
       </div>
+
+      {/* ── EDIT ITEM MODAL ── */}
+      {editItem && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
+          <div className="bg-white rounded-t-[24px] sm:rounded-[24px] p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-[22px] font-black text-[#1c1c1a]">Edit Item</h3>
+              <button onClick={() => setEditItem(null)} className="p-2 hover:bg-gray-100 rounded-full"><X size={20} /></button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[14px] font-semibold text-[#1c1c1a] mb-1">Name</label>
+                <input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className="w-full px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]" />
+              </div>
+              <div>
+                <label className="block text-[14px] font-semibold text-[#1c1c1a] mb-1">Description</label>
+                <textarea value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} rows={3} className="w-full px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]" />
+              </div>
+              <div>
+                <label className="block text-[14px] font-semibold text-[#1c1c1a] mb-1">Price</label>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">AED</span>
+                  <input type="number" step="0.01" value={editForm.price} onChange={e => setEditForm(p => ({ ...p, price: e.target.value }))} className="flex-1 px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[14px] font-semibold text-[#1c1c1a] mb-1">Category</label>
+                <select value={editForm.category} onChange={e => setEditForm(p => ({ ...p, category: e.target.value }))} className="w-full px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]">
+                  {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[14px] font-semibold text-[#1c1c1a] mb-1">Photo</label>
+                {editImagePreview ? (
+                  <div className="relative">
+                    <img src={editImagePreview} alt="Preview" className="w-full h-[140px] object-cover rounded-[12px] border border-[#e0e0e0]" />
+                    <button type="button" onClick={() => { setEditImageFile(null); setEditImagePreview(null); }} className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-md hover:bg-red-50">
+                      <X size={14} className="text-red-500" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center gap-1 w-full h-[100px] border-2 border-dashed border-[#d1d1d1] rounded-[12px] cursor-pointer hover:border-[#f51c27] transition-colors text-gray-400 hover:text-[#f51c27]">
+                    <ImagePlus size={24} />
+                    <span className="text-[12px] font-medium">Pick a photo</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) { setEditImageFile(file); setEditImagePreview(URL.createObjectURL(file)); }
+                    }} />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setEditItem(null)} className="flex-1 py-3 border-2 border-gray-200 rounded-[12px] font-bold text-gray-600 hover:bg-gray-50">Cancel</button>
+              <button
+                disabled={savingEdit || !editForm.name.trim() || !editForm.price.trim()}
+                onClick={async () => {
+                  if (!editItem?.id) return;
+                  setSavingEdit(true);
+                  try {
+                    const token = await getToken();
+                    let imageUrl = editImagePreview;
+
+                    // Upload new image if a file was selected
+                    if (editImageFile) {
+                      imageUrl = await uploadToCloudinary(editImageFile);
+                    }
+
+                    const res = await fetch(`${API_URL()}/api/menu/${editItem.id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                      body: JSON.stringify({ ...editForm, image: imageUrl }),
+                    });
+                    if (!res.ok) throw new Error('Failed to update');
+                    const updated = await res.json();
+                    setMenuItems(prev => prev.map(m => m.id === editItem.id ? updated : m));
+                    toast.success(`"${editForm.name}" updated!`);
+                    setEditItem(null);
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : 'Update failed');
+                  } finally {
+                    setSavingEdit(false);
+                  }
+                }}
+                className="flex-1 py-3 bg-[#f51c27] text-white rounded-[12px] font-bold hover:bg-[#d90429] disabled:opacity-40 transition-colors"
+              >
+                {savingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── RESET CONFIRMATION MODAL ── */}
       {showResetModal && (

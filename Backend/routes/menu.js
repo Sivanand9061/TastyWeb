@@ -77,19 +77,25 @@ router.post('/', requireAdmin, async (req, res) => {
   }
 });
 
-// Update menu item availability (admin only)
+// Update menu item (admin only)
 router.put('/:id', requireAdmin, async (req, res) => {
   try {
-    const { available } = req.body;
-    
-    // Check if item exists
     const snapshot = await req.db.ref(`menu_items/${req.params.id}`).once('value');
     if (!snapshot.exists()) {
       return res.status(404).json({ error: 'Item not found' });
     }
-    
-    await req.db.ref(`menu_items/${req.params.id}`).update({ available });
-    res.json({ success: true, id: req.params.id, available });
+
+    // Only update fields that are provided
+    const updates = {};
+    const allowed = ['name', 'description', 'price', 'category', 'image', 'available'];
+    allowed.forEach(field => {
+      if (req.body[field] !== undefined) updates[field] = req.body[field];
+    });
+    updates.updatedAt = new Date().toISOString();
+
+    await req.db.ref(`menu_items/${req.params.id}`).update(updates);
+    const updated = await req.db.ref(`menu_items/${req.params.id}`).once('value');
+    res.json(updated.val());
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
