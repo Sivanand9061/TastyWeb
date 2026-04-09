@@ -28,16 +28,28 @@ const resizeImage = (file: File, maxWidth = 900): Promise<Blob> =>
 const uploadToCloudinary = async (file: File): Promise<string> => {
   const cloud = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
   const preset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-  if (!cloud || !preset) throw new Error('Cloudinary not configured');
+  console.log('[Cloudinary] cloud:', cloud, '| preset:', preset);
+  if (!cloud || !preset) throw new Error(`Cloudinary env vars missing (cloud="${cloud}", preset="${preset}")`);
   const blob = await resizeImage(file);
   const fd = new FormData();
   fd.append('file', blob, 'menu-item.jpg');
   fd.append('upload_preset', preset);
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, { method: 'POST', body: fd });
-  if (!res.ok) throw new Error('Cloudinary upload failed');
+  const url = `https://api.cloudinary.com/v1_1/${cloud}/image/upload`;
+  console.log('[Cloudinary] uploading to:', url);
+  let res: Response;
+  try {
+    res = await fetch(url, { method: 'POST', body: fd });
+  } catch (netErr) {
+    throw new Error(`Network error hitting Cloudinary (cloud="${cloud}"): ${netErr}`);
+  }
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    throw new Error(`Cloudinary rejected upload (${res.status}): ${errBody.slice(0, 200)}`);
+  }
   const data = await res.json();
   return data.secure_url as string;
 };
+
 
 interface MenuItem {
   id?: string;
