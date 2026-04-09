@@ -102,61 +102,73 @@ function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
+  // Use offsetLeft (layout position) minus scrollLeft so the underline tracks
+  // correctly whether or not the tab strip is mid-scroll animation.
+  const calcUnderline = (index: number) => {
+    const btn = buttonRefs.current[index];
+    const container = containerRef.current;
+    if (!btn || !container) return;
+    setUnderlineStyle({
+      width: btn.offsetWidth,
+      left: btn.offsetLeft - container.scrollLeft,
+    });
+  };
+
+  // Keep underline in sync while the tab strip pans (animated scroll).
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const onScroll = () => calcUnderline(activeCategory);
+    container.addEventListener('scroll', onScroll, { passive: true });
+    return () => container.removeEventListener('scroll', onScroll);
+  }, [activeCategory]);
+
+  // Recalculate on category change or resize.
+  useEffect(() => {
+    calcUnderline(activeCategory);
+    const onResize = () => calcUnderline(activeCategory);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [activeCategory, categories]);
+
   const handleCategoryClick = (index: number) => {
     setActiveCategory(index);
     onCategoryClick(index);
-    // Scroll the tab into view
-    const btn = buttonRefs.current[index];
-    btn?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    // Delay underline update to let scroll finish
-    setTimeout(() => updateUnderline(index), 320);
-  };
 
-  const updateUnderline = (index: number) => {
-    const button = buttonRefs.current[index];
+    // Pan the tab strip to centre the active tab — using scrollTo on the
+    // container so it does NOT trigger a full-page scroll.
+    const btn = buttonRefs.current[index];
     const container = containerRef.current;
-    if (button && container) {
-      const containerRect = container.getBoundingClientRect();
-      const buttonRect = button.getBoundingClientRect();
-      setUnderlineStyle({
-        width: buttonRect.width,
-        left: buttonRect.left - containerRect.left + container.scrollLeft,
-      });
+    if (btn && container) {
+      const targetScroll = btn.offsetLeft - container.clientWidth / 2 + btn.offsetWidth / 2;
+      container.scrollTo({ left: Math.max(0, targetScroll), behavior: 'smooth' });
     }
   };
-
-  useEffect(() => {
-    updateUnderline(activeCategory);
-    const handleResize = () => updateUnderline(activeCategory);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [activeCategory, categories]);
 
   return (
     <div className="sticky top-[105px] z-40 bg-[var(--bg-primary)] border-t border-b border-[var(--item-border)] py-3 mb-6">
       <div className="px-4">
-        <div ref={containerRef} className="flex items-center gap-6 overflow-x-auto scrollbar-hide relative">
+        <div ref={containerRef} className="flex items-center gap-6 overflow-x-auto scrollbar-hide">
           {categories.map((category, index) => (
             <button
               key={category}
-              ref={(el) => {
-                buttonRefs.current[index] = el;
-              }}
+              ref={(el) => { buttonRefs.current[index] = el; }}
               onClick={() => handleCategoryClick(index)}
-              className={`whitespace-nowrap transition-all ${
+              // Fixed font size on ALL tabs — no size change = no layout shift / page jump
+              className={`whitespace-nowrap text-[17px] transition-opacity duration-200 ${
                 activeCategory === index
-                  ? "text-[var(--text-secondary)] text-[21px] font-medium"
-                  : "text-[var(--text-secondary)] text-[15.5px] opacity-50 hover:opacity-75"
+                  ? 'text-[var(--text-secondary)] font-semibold opacity-100'
+                  : 'text-[var(--text-secondary)] font-normal opacity-45 hover:opacity-70'
               }`}
             >
               {category}
             </button>
           ))}
         </div>
-        <div 
-          className="h-1 bg-[var(--category-underline)] rounded mt-3 transition-all duration-300 ease-out"
+        <div
+          className="h-[3px] bg-[var(--category-underline)] rounded-full mt-3 transition-all duration-250 ease-out"
           style={{ width: `${underlineStyle.width}px`, transform: `translateX(${underlineStyle.left}px)` }}
-        ></div>
+        />
       </div>
     </div>
   );
@@ -514,10 +526,13 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
   }, []);
 
   const handleCategoryClick = (index: number) => {
-    categoryRefs.current[index]?.scrollIntoView({ 
-      behavior: 'smooth',
-      block: 'start'
-    });
+    const el = categoryRefs.current[index];
+    if (!el) return;
+    // Scroll the page section into view, offset by the combined sticky header height
+    // (topbar ~105px + category strip ~60px = 165px total)
+    const STICKY_OFFSET = 168;
+    const top = el.getBoundingClientRect().top + window.scrollY - STICKY_OFFSET;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   };
 
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
