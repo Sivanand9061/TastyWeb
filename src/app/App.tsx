@@ -11,6 +11,7 @@ interface CartItem {
   description: string;
   price: string;
   quantity: number;
+  image?: string;
 }
 
 export default function App() {
