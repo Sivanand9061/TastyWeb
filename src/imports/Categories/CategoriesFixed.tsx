@@ -98,77 +98,56 @@ interface CategoryTabsProps {
 
 function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
   const [activeCategory, setActiveCategory] = useState(0);
-  const [underlineStyle, setUnderlineStyle] = useState({ width: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  // Use offsetLeft (layout position) minus scrollLeft so the underline tracks
-  // correctly whether or not the tab strip is mid-scroll animation.
-  const calcUnderline = (index: number) => {
-    const btn = buttonRefs.current[index];
-    const container = containerRef.current;
-    if (!btn || !container) return;
-    setUnderlineStyle({
-      width: btn.offsetWidth,
-      left: btn.offsetLeft - container.scrollLeft,
-    });
-  };
-
-  // Keep underline in sync while the tab strip pans (animated scroll).
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const onScroll = () => calcUnderline(activeCategory);
-    container.addEventListener('scroll', onScroll, { passive: true });
-    return () => container.removeEventListener('scroll', onScroll);
-  }, [activeCategory]);
-
-  // Recalculate on category change or resize.
-  useEffect(() => {
-    calcUnderline(activeCategory);
-    const onResize = () => calcUnderline(activeCategory);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [activeCategory, categories]);
 
   const handleCategoryClick = (index: number) => {
     setActiveCategory(index);
     onCategoryClick(index);
-
-    // Pan the tab strip to centre the active tab — using scrollTo on the
-    // container so it does NOT trigger a full-page scroll.
+    // Pan the tab strip so the active tab is centred — scrollTo on the
+    // container only, never the whole page.
     const btn = buttonRefs.current[index];
     const container = containerRef.current;
     if (btn && container) {
-      const targetScroll = btn.offsetLeft - container.clientWidth / 2 + btn.offsetWidth / 2;
-      container.scrollTo({ left: Math.max(0, targetScroll), behavior: 'smooth' });
+      const target = btn.offsetLeft - container.clientWidth / 2 + btn.offsetWidth / 2;
+      container.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
     }
   };
 
   return (
-    <div className="sticky top-[105px] z-40 bg-[var(--bg-primary)] border-t border-b border-[var(--item-border)] py-3 mb-6">
-      <div className="px-4">
-        <div ref={containerRef} className="flex items-center gap-6 overflow-x-auto scrollbar-hide">
-          {categories.map((category, index) => (
+    <div className="sticky top-[105px] z-40 bg-[var(--bg-primary)] border-t border-b border-[var(--item-border)] mb-6">
+      <div
+        ref={containerRef}
+        className="flex items-center gap-1 overflow-x-auto scrollbar-hide px-3"
+      >
+        {categories.map((category, index) => {
+          const isActive = activeCategory === index;
+          return (
             <button
               key={category}
               ref={(el) => { buttonRefs.current[index] = el; }}
               onClick={() => handleCategoryClick(index)}
-              // Fixed font size on ALL tabs — no size change = no layout shift / page jump
-              className={`whitespace-nowrap text-[17px] transition-opacity duration-200 ${
-                activeCategory === index
-                  ? 'text-[var(--text-secondary)] font-semibold opacity-100'
-                  : 'text-[var(--text-secondary)] font-normal opacity-45 hover:opacity-70'
-              }`}
+              className="relative flex-shrink-0 px-4 py-3 text-[15px] font-medium transition-all duration-200"
+              style={{
+                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                opacity: isActive ? 1 : 0.5,
+                fontWeight: isActive ? '700' : '500',
+              }}
             >
               {category}
+              {/* Pill indicator — scales from 0 → 1 on active */}
+              <span
+                className="absolute bottom-0 left-1/2 h-[3px] rounded-full bg-[var(--accent)] transition-all duration-300 ease-out"
+                style={{
+                  width: '60%',
+                  transform: `translateX(-50%) scaleX(${isActive ? 1 : 0})`,
+                  opacity: isActive ? 1 : 0,
+                  transformOrigin: 'center',
+                }}
+              />
             </button>
-          ))}
-        </div>
-        <div
-          className="h-[3px] bg-[var(--category-underline)] rounded-full mt-3 transition-all duration-250 ease-out"
-          style={{ width: `${underlineStyle.width}px`, transform: `translateX(${underlineStyle.left}px)` }}
-        />
+          );
+        })}
       </div>
     </div>
   );
@@ -233,7 +212,7 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
       {visibleCategories.map((category) => {
         const categoryIndex = categories.indexOf(category);
         return (
-          <div key={category} ref={categoryRefs[categoryIndex]} className="scroll-mt-[140px]">
+          <div key={category} ref={categoryRefs[categoryIndex]} data-cat={categoryIndex} className="scroll-mt-[140px]">
             <h2 className="text-[24px] font-bold text-[var(--text-primary)] mb-6 mt-8">{category}</h2>
             {filtered[category as keyof typeof filtered].map((item, itemIndex) => (
             <div 
@@ -526,11 +505,12 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
   }, []);
 
   const handleCategoryClick = (index: number) => {
-    const el = categoryRefs.current[index];
+    // Use data-cat attribute so the scroll is always reliable regardless of
+    // how React manages the ref array across renders.
+    const el = document.querySelector(`[data-cat="${index}"]`) as HTMLElement | null;
     if (!el) return;
-    // Scroll the page section into view, offset by the combined sticky header height
-    // (topbar ~105px + category strip ~60px = 165px total)
-    const STICKY_OFFSET = 168;
+    // Offset = topbar (105px) + category strip (~58px) + small gap
+    const STICKY_OFFSET = 172;
     const top = el.getBoundingClientRect().top + window.scrollY - STICKY_OFFSET;
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   };
