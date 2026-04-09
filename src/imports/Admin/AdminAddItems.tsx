@@ -330,16 +330,16 @@ export default function AdminAddItems() {
 
   // ─── Guard ───────────────────────────────────────────────────────
   if (authLoading) {
-    return <div className="min-h-screen bg-[#fbf4e8] flex items-center justify-center"><p>Loading...</p></div>;
+    return <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center"><p>Loading...</p></div>;
   }
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-[#fbf4e8] p-8 flex flex-col items-center justify-center text-center">
+      <div className="min-h-screen bg-[var(--bg-primary)] p-8 flex flex-col items-center justify-center text-center">
         <h1 className="text-3xl font-bold text-red-600 mb-4">Access Denied</h1>
         <p className="text-gray-600 mb-6">You must be an administrator to access this page.</p>
         {!currentUser && (
-          <button onClick={() => setIsLoginModalOpen(true)} className="px-6 py-3 bg-[#f51c27] text-white rounded-xl font-medium hover:bg-[#d90429]">
+          <button onClick={() => setIsLoginModalOpen(true)} className="px-6 py-3 bg-[var(--accent)] text-white rounded-xl font-medium hover:bg-[var(--accent-hover)]">
             Log In
           </button>
         )}
@@ -351,51 +351,51 @@ export default function AdminAddItems() {
   const filteredItems = menuItems.filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className="min-h-screen bg-[#fbf4e8] p-6 pt-20">
+    <div className="min-h-screen bg-[var(--bg-primary)] p-6 pt-20">
       <div className="max-w-2xl mx-auto space-y-10">
 
         {/* ── ADD ITEM ── */}
         <section>
-          <h1 className="text-[36px] font-black text-[#1c1c1a] mb-6">Add Menu Item</h1>
-          <form onSubmit={handleSubmit} className="bg-white rounded-[22px] p-8 shadow-sm border border-[#e0e0e0]">
+          <h1 className="text-[36px] font-black text-[var(--text-primary)] mb-6">Add Menu Item</h1>
+          <form onSubmit={handleSubmit} className="bg-[var(--bg-card)] rounded-[22px] p-8 shadow-sm border border-[var(--bg-card-border)]">
             <div className="mb-5">
-              <label className="block text-[15px] font-semibold text-[#1c1c1a] mb-2">Item Name *</label>
-              <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="e.g., Chicken Shawarma" className="w-full px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]" />
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Item Name *</label>
+              <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="e.g., Chicken Shawarma" className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
             </div>
             <div className="mb-5">
-              <label className="block text-[15px] font-semibold text-[#1c1c1a] mb-2">Description *</label>
-              <textarea name="description" value={formData.description} onChange={handleChange} placeholder="e.g., Grilled chicken with garlic sauce, fresh veggies" rows={3} className="w-full px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]" />
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Description *</label>
+              <textarea name="description" value={formData.description} onChange={handleChange} placeholder="e.g., Grilled chicken with garlic sauce, fresh veggies" rows={3} className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
             </div>
             <div className="mb-5">
-              <label className="block text-[15px] font-semibold text-[#1c1c1a] mb-2">Price *</label>
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Price *</label>
               <div className="flex items-center gap-2">
                 <span className="text-[16px] font-semibold">AED</span>
-                <input type="number" name="price" value={formData.price} onChange={handleChange} placeholder="35" step="0.01" className="flex-1 px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]" />
+                <input type="number" name="price" value={formData.price} onChange={handleChange} placeholder="35" step="0.01" className="flex-1 px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
               </div>
             </div>
             <div className="mb-6">
-              <label className="block text-[15px] font-semibold text-[#1c1c1a] mb-2">Category *</label>
-              <select name="category" value={formData.category} onChange={handleChange} className="w-full px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]">
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Category *</label>
+              <select name="category" value={formData.category} onChange={handleChange} className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]">
                 {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
 
             {/* Image Upload */}
             <div className="mb-6">
-              <label className="block text-[15px] font-semibold text-[#1c1c1a] mb-2">Item Photo <span className="text-gray-400 font-normal">(optional)</span></label>
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Item Photo <span className="text-gray-400 font-normal">(optional)</span></label>
               {imagePreview ? (
                 <div className="relative">
-                  <img src={imagePreview} alt="Preview" className="w-full h-[180px] object-cover rounded-[16px] border border-[#e0e0e0]" />
+                  <img src={imagePreview} alt="Preview" className="w-full h-[180px] object-cover rounded-[16px] border border-[var(--bg-card-border)]" />
                   <button
                     type="button"
                     onClick={() => { setImageFile(null); setImagePreview(null); }}
-                    className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-md hover:bg-red-50 transition-colors"
+                    className="absolute top-2 right-2 bg-[var(--bg-card)] rounded-full p-1.5 shadow-md hover:bg-red-50 transition-colors"
                   >
                     <X size={16} className="text-red-500" />
                   </button>
                 </div>
               ) : (
-                <label className="flex flex-col items-center justify-center gap-2 w-full h-[140px] border-2 border-dashed border-[#d1d1d1] rounded-[16px] cursor-pointer hover:border-[#f51c27] transition-colors text-gray-400 hover:text-[#f51c27]">
+                <label className="flex flex-col items-center justify-center gap-2 w-full h-[140px] border-2 border-dashed border-[var(--bg-input-border)] rounded-[16px] cursor-pointer hover:border-[var(--accent)] transition-colors text-gray-400 hover:text-[var(--accent)]">
                   <ImagePlus size={32} />
                   <span className="text-[14px] font-medium">Tap to pick a photo</span>
                   <span className="text-[12px]">JPG, PNG, WEBP up to 10MB</span>
@@ -418,7 +418,7 @@ export default function AdminAddItems() {
             {message && (
               <div className={`mb-5 p-4 rounded-[12px] text-[15px] font-semibold ${message.type === 'success' ? 'bg-[#1caa00] text-white' : 'bg-[#ff4444] text-white'}`}>{message.text}</div>
             )}
-            <button type="submit" disabled={loading || uploadingImage} className="w-full bg-[#f51c27] text-white py-3 rounded-[12px] text-[16px] font-bold hover:bg-[#d90429] transition-colors disabled:opacity-50">
+            <button type="submit" disabled={loading || uploadingImage} className="w-full bg-[var(--accent)] text-white py-3 rounded-[12px] text-[16px] font-bold hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50">
               {uploadingImage ? "Uploading photo..." : loading ? "Adding..." : "Add Item"}
             </button>
           </form>
@@ -426,8 +426,8 @@ export default function AdminAddItems() {
 
         {/* ── CATEGORIES ── */}
         <section>
-          <h2 className="text-[28px] font-black text-[#1c1c1a] mb-5">Manage Categories</h2>
-          <div className="bg-white rounded-[22px] p-6 shadow-sm border border-[#e0e0e0]">
+          <h2 className="text-[28px] font-black text-[var(--text-primary)] mb-5">Manage Categories</h2>
+          <div className="bg-[var(--bg-card)] rounded-[22px] p-6 shadow-sm border border-[var(--bg-card-border)]">
 
             {/* Add new category */}
             <div className="flex gap-3 mb-6">
@@ -437,7 +437,7 @@ export default function AdminAddItems() {
                 onChange={e => setNewCategory(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCategory())}
                 placeholder="New category name..."
-                className="flex-1 px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]"
+                className="flex-1 px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]"
               />
               <button onClick={addCategory} disabled={savingCategory || !newCategory.trim()} className="flex items-center gap-2 bg-[#1c1c1a] text-white px-5 py-3 rounded-[12px] font-bold hover:bg-gray-800 disabled:opacity-40 transition-colors">
                 <Plus size={18} /> Add
@@ -447,8 +447,8 @@ export default function AdminAddItems() {
             {/* Category list */}
             <div className="flex flex-wrap gap-2">
               {categories.map(cat => (
-                <div key={cat} className="flex items-center gap-2 bg-[#fbf4e8] border border-[#e0e0e0] rounded-full px-4 py-2">
-                  <span className="font-semibold text-[14px] text-[#1c1c1a]">{cat}</span>
+                <div key={cat} className="flex items-center gap-2 bg-[var(--bg-primary)] border border-[var(--bg-card-border)] rounded-full px-4 py-2">
+                  <span className="font-semibold text-[14px] text-[var(--text-primary)]">{cat}</span>
                   {confirmDeleteCategory === cat ? (
                     <div className="flex items-center gap-1 ml-1">
                       <button onClick={() => deleteCategory(cat)} className="text-[12px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold hover:bg-red-600">Confirm</button>
@@ -468,12 +468,12 @@ export default function AdminAddItems() {
 
         {/* ── STORE SETTINGS ── */}
         <section>
-          <h2 className="text-[28px] font-black text-[#1c1c1a] mb-5">Store Settings</h2>
-          <div className="bg-white rounded-[22px] p-6 shadow-sm border border-[#e0e0e0]">
-            <label className="block text-[15px] font-semibold text-[#1c1c1a] mb-1">Max Delivery Radius (km)</label>
+          <h2 className="text-[28px] font-black text-[var(--text-primary)] mb-5">Store Settings</h2>
+          <div className="bg-[var(--bg-card)] rounded-[22px] p-6 shadow-sm border border-[var(--bg-card-border)]">
+            <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-1">Max Delivery Radius (km)</label>
             <p className="text-sm text-gray-500 mb-4">Orders outside this range from the restaurant will be blocked.</p>
             <div className="flex gap-4 items-center">
-              <input type="number" value={deliveryRadius} onChange={e => setDeliveryRadius(Number(e.target.value))} className="w-32 px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]" />
+              <input type="number" value={deliveryRadius} onChange={e => setDeliveryRadius(Number(e.target.value))} className="w-32 px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
               <button onClick={saveSettings} disabled={savingSettings} className="bg-[#1c1c1a] text-white px-6 py-3 rounded-[12px] font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors">
                 {savingSettings ? "Saving..." : "Save"}
               </button>
@@ -484,8 +484,8 @@ export default function AdminAddItems() {
         {/* ── THEME PICKER ── */}
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <Palette size={24} className="text-[#1c1c1a]" />
-            <h2 className="text-[28px] font-black text-[#1c1c1a]">Site Theme</h2>
+            <Palette size={24} className="text-[var(--text-primary)]" />
+            <h2 className="text-[28px] font-black text-[var(--text-primary)]">Site Theme</h2>
           </div>
           <p className="text-sm text-gray-500 mb-4">Switch your restaurant's look instantly. Customers see the change in real time.</p>
           <div className="grid grid-cols-3 gap-3">
@@ -510,7 +510,7 @@ export default function AdminAddItems() {
                     }
                   }}
                   className={`relative rounded-[16px] p-3 border-2 transition-all ${
-                    isActive ? 'border-[#f51c27] shadow-lg scale-[1.02]' : 'border-[#e0e0e0] hover:border-gray-400'
+                    isActive ? 'border-[var(--accent)] shadow-lg scale-[1.02]' : 'border-[var(--bg-card-border)] hover:border-gray-400'
                   } disabled:opacity-60`}
                 >
                   {/* Mini preview */}
@@ -525,7 +525,7 @@ export default function AdminAddItems() {
                       <div className="w-6 h-3 rounded-full" style={{ background: colors['--category-underline'] }} />
                     </div>
                   </div>
-                  <span className="text-[12px] font-bold text-[#1c1c1a] block">{theme.emoji} {theme.name}</span>
+                  <span className="text-[12px] font-bold text-[var(--text-primary)] block">{theme.emoji} {theme.name}</span>
                   {isActive && (
                     <div className="absolute top-1.5 right-1.5 bg-[#1caa00] rounded-full w-5 h-5 flex items-center justify-center">
                       <span className="text-white text-[11px]">✓</span>
@@ -540,7 +540,7 @@ export default function AdminAddItems() {
         {/* ── MANAGE ITEMS ── */}
         <section>
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[28px] font-black text-[#1c1c1a]">Menu Items ({menuItems.length})</h2>
+            <h2 className="text-[28px] font-black text-[var(--text-primary)]">Menu Items ({menuItems.length})</h2>
             <button
               onClick={() => setShowResetModal(true)}
               className="flex items-center gap-2 bg-red-50 border border-red-300 text-red-600 px-4 py-2 rounded-[12px] font-bold text-[14px] hover:bg-red-100 transition-colors"
@@ -554,7 +554,7 @@ export default function AdminAddItems() {
             placeholder="Search items..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 mb-5 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]"
+            className="w-full px-4 py-3 mb-5 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]"
           />
 
           {fetchingMenu ? (
@@ -564,9 +564,9 @@ export default function AdminAddItems() {
           ) : (
             <div className="space-y-3">
               {filteredItems.map(item => (
-                <div key={item.id} className="bg-white rounded-[16px] p-4 flex items-center justify-between border border-[#e0e0e0] shadow-sm">
+                <div key={item.id} className="bg-[var(--bg-card)] rounded-[16px] p-4 flex items-center justify-between border border-[var(--bg-card-border)] shadow-sm">
                   <div className="min-w-0 flex-1 mr-4">
-                    <h3 className="font-bold text-[17px] text-[#1c1c1a] truncate">{item.name}</h3>
+                    <h3 className="font-bold text-[17px] text-[var(--text-primary)] truncate">{item.name}</h3>
                     <p className="text-gray-500 text-[13px]">AED {item.price} · {item.category}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -577,7 +577,7 @@ export default function AdminAddItems() {
                       onClick={() => toggleAvailability(item)}
                       className={`w-12 h-7 rounded-full transition-colors relative ${item.available !== false ? 'bg-green-500' : 'bg-gray-300'}`}
                     >
-                      <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${item.available !== false ? 'right-1' : 'left-1'}`} />
+                      <div className={`w-5 h-5 bg-[var(--bg-card)] rounded-full absolute top-1 transition-all ${item.available !== false ? 'right-1' : 'left-1'}`} />
                     </button>
                     <button
                       onClick={() => {
@@ -613,45 +613,45 @@ export default function AdminAddItems() {
       {/* ── EDIT ITEM MODAL ── */}
       {editItem && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
-          <div className="bg-white rounded-t-[24px] sm:rounded-[24px] p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+          <div className="bg-[var(--bg-card)] rounded-t-[24px] sm:rounded-[24px] p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-[22px] font-black text-[#1c1c1a]">Edit Item</h3>
+              <h3 className="text-[22px] font-black text-[var(--text-primary)]">Edit Item</h3>
               <button onClick={() => setEditItem(null)} className="p-2 hover:bg-gray-100 rounded-full"><X size={20} /></button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-[14px] font-semibold text-[#1c1c1a] mb-1">Name</label>
-                <input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className="w-full px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]" />
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Name</label>
+                <input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
               </div>
               <div>
-                <label className="block text-[14px] font-semibold text-[#1c1c1a] mb-1">Description</label>
-                <textarea value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} rows={3} className="w-full px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]" />
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Description</label>
+                <textarea value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} rows={3} className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
               </div>
               <div>
-                <label className="block text-[14px] font-semibold text-[#1c1c1a] mb-1">Price</label>
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Price</label>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">AED</span>
-                  <input type="number" step="0.01" value={editForm.price} onChange={e => setEditForm(p => ({ ...p, price: e.target.value }))} className="flex-1 px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]" />
+                  <input type="number" step="0.01" value={editForm.price} onChange={e => setEditForm(p => ({ ...p, price: e.target.value }))} className="flex-1 px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
                 </div>
               </div>
               <div>
-                <label className="block text-[14px] font-semibold text-[#1c1c1a] mb-1">Category</label>
-                <select value={editForm.category} onChange={e => setEditForm(p => ({ ...p, category: e.target.value }))} className="w-full px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] focus:outline-none focus:border-[#f51c27]">
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Category</label>
+                <select value={editForm.category} onChange={e => setEditForm(p => ({ ...p, category: e.target.value }))} className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]">
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[14px] font-semibold text-[#1c1c1a] mb-1">Photo</label>
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Photo</label>
                 {editImagePreview ? (
                   <div className="relative">
-                    <img src={editImagePreview} alt="Preview" className="w-full h-[140px] object-cover rounded-[12px] border border-[#e0e0e0]" />
-                    <button type="button" onClick={() => { setEditImageFile(null); setEditImagePreview(null); }} className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-md hover:bg-red-50">
+                    <img src={editImagePreview} alt="Preview" className="w-full h-[140px] object-cover rounded-[12px] border border-[var(--bg-card-border)]" />
+                    <button type="button" onClick={() => { setEditImageFile(null); setEditImagePreview(null); }} className="absolute top-2 right-2 bg-[var(--bg-card)] rounded-full p-1.5 shadow-md hover:bg-red-50">
                       <X size={14} className="text-red-500" />
                     </button>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center gap-1 w-full h-[100px] border-2 border-dashed border-[#d1d1d1] rounded-[12px] cursor-pointer hover:border-[#f51c27] transition-colors text-gray-400 hover:text-[#f51c27]">
+                  <label className="flex flex-col items-center justify-center gap-1 w-full h-[100px] border-2 border-dashed border-[var(--bg-input-border)] rounded-[12px] cursor-pointer hover:border-[var(--accent)] transition-colors text-gray-400 hover:text-[var(--accent)]">
                     <ImagePlus size={24} />
                     <span className="text-[12px] font-medium">Pick a photo</span>
                     <input type="file" accept="image/*" className="hidden" onChange={e => {
@@ -695,7 +695,7 @@ export default function AdminAddItems() {
                     setSavingEdit(false);
                   }
                 }}
-                className="flex-1 py-3 bg-[#f51c27] text-white rounded-[12px] font-bold hover:bg-[#d90429] disabled:opacity-40 transition-colors"
+                className="flex-1 py-3 bg-[var(--accent)] text-white rounded-[12px] font-bold hover:bg-[var(--accent-hover)] disabled:opacity-40 transition-colors"
               >
                 {savingEdit ? 'Saving...' : 'Save Changes'}
               </button>
@@ -707,13 +707,13 @@ export default function AdminAddItems() {
       {/* ── RESET CONFIRMATION MODAL ── */}
       {showResetModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6">
-          <div className="bg-white rounded-[24px] p-8 max-w-sm w-full shadow-2xl">
+          <div className="bg-[var(--bg-card)] rounded-[24px] p-8 max-w-sm w-full shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
                 <AlertTriangle size={24} className="text-red-600" />
               </div>
               <div>
-                <h3 className="text-[20px] font-black text-[#1c1c1a]">Reset Entire Menu</h3>
+                <h3 className="text-[20px] font-black text-[var(--text-primary)]">Reset Entire Menu</h3>
                 <p className="text-[13px] text-gray-500">This cannot be undone.</p>
               </div>
             </div>
@@ -725,7 +725,7 @@ export default function AdminAddItems() {
               value={resetConfirmText}
               onChange={e => setResetConfirmText(e.target.value)}
               placeholder='Type "RESET" to confirm'
-              className="w-full px-4 py-3 border border-[#d1d1d1] rounded-[12px] text-[16px] mb-5 focus:outline-none focus:border-red-500"
+              className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] mb-5 focus:outline-none focus:border-red-500"
             />
             <div className="flex gap-3">
               <button onClick={() => { setShowResetModal(false); setResetConfirmText(""); }} className="flex-1 py-3 border-2 border-gray-200 rounded-[12px] font-bold text-gray-600 hover:bg-gray-50">
