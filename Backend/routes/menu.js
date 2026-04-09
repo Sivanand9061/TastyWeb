@@ -95,4 +95,30 @@ router.put('/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// Reset entire menu (admin only) — must be before /:id
+router.delete('/reset', requireAdmin, async (req, res) => {
+  try {
+    await req.db.ref('menu_items').remove();
+    console.log('🗑️ Entire menu wiped by admin');
+    res.json({ success: true, message: 'Menu reset successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete single menu item (admin only)
+router.delete('/:id', requireAdmin, async (req, res) => {
+  try {
+    const snapshot = await req.db.ref(`menu_items/${req.params.id}`).once('value');
+    if (!snapshot.exists()) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    await req.db.ref(`menu_items/${req.params.id}`).remove();
+    console.log(`🗑️ Menu item ${req.params.id} deleted`);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
