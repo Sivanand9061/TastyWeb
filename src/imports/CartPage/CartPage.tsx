@@ -204,7 +204,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
   };
 
   const validateEmail = (email: string): string => {
-    if (!email.trim()) return "Email is required for digital receipts";
+    if (!email.trim()) return "";
     if (!/^\S+@\S+\.\S+$/.test(email)) return "Please enter a valid email address";
     return "";
   };
@@ -353,7 +353,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
 
                 {/* Email Field */}
                 <div>
-                  <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Email Address * <span className="text-[12px] text-[#727272]">(For your receipt)</span></label>
+                  <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Email Address <span className="text-[12px] text-[#727272]">(Optional)</span></label>
                   <input
                     type="email"
                     value={formData.email}
@@ -443,7 +443,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={Object.keys(errors).length > 0 || !formData.name.trim() || !formData.address.trim() || !!distanceError}
+                  disabled={Object.values(errors).some(err => err.length > 0) || !formData.name.trim() || !formData.address.trim() || !!distanceError}
                   className="w-full bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] py-4 text-[18px] font-semibold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Confirm Order

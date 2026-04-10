@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
+import { signInWithPhoneNumber, RecaptchaVerifier, signInWithEmailAndPassword } from 'firebase/auth';
 import { ref, set, get } from 'firebase/database';
 import { auth, db } from '../../firebase';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, CheckCircle2, Phone, KeyRound } from 'lucide-react';
+import { X, CheckCircle2, Phone, KeyRound, Mail, Lock } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -19,6 +19,7 @@ const getFriendlyErrorMessage = (err: any): string => {
   if (code.includes('invalid-phone-number') || code.includes('missing-phone-number')) return "Please enter a valid phone number including country code (e.g. +971).";
   if (code.includes('too-many-requests')) return "Too many attempts. To protect your account, please try again later.";
   if (code.includes('network-request-failed')) return "Network error. Please check your internet connection.";
+  if (code.includes('user-not-found') || code.includes('wrong-password') || code.includes('invalid-credential')) return "Invalid email or password.";
 
   return err.message?.replace('Firebase: ', '') || "An error occurred. Please try again.";
 };
@@ -29,11 +30,18 @@ interface LoginSignupModalProps {
 }
 
 export default function LoginSignupModal({ isOpen, onClose }: LoginSignupModalProps) {
+  // Option toggle
+  const [isAdminLogin, setIsAdminLogin] = useState(false);
+
   // Phone state
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   
+  // Admin state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -43,6 +51,9 @@ export default function LoginSignupModal({ isOpen, onClose }: LoginSignupModalPr
       setError('');
       setPhoneNumber('');
       setOtp('');
+      setEmail('');
+      setPassword('');
+      setIsAdminLogin(false);
       setConfirmationResult(null);
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
@@ -112,6 +123,21 @@ export default function LoginSignupModal({ isOpen, onClose }: LoginSignupModalPr
     }
   };
 
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      onClose();
+    } catch (err: any) {
+      setError(getFriendlyErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -134,10 +160,10 @@ export default function LoginSignupModal({ isOpen, onClose }: LoginSignupModalPr
             <div className="p-8">
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Verify Phone Number
+                  {isAdminLogin ? 'Restaurant Login' : 'Verify Phone Number'}
                 </h2>
                 <p className="text-gray-500 text-sm">
-                  We'll send you a short code to verify your account securely.
+                  {isAdminLogin ? 'Enter your staff credentials.' : "We'll send you a short code to verify your account securely."}
                 </p>
               </div>
 
@@ -150,6 +176,52 @@ export default function LoginSignupModal({ isOpen, onClose }: LoginSignupModalPr
               {/* Invisible Recaptcha */}
               <div id="recaptcha-container"></div>
 
+              {isAdminLogin ? (
+                <form onSubmit={handleAdminLogin} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                      <input 
+                        type="email" 
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#f51c27]/20 focus:border-[#f51c27] outline-none transition-all"
+                        placeholder="admin@restaurant.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                      <input 
+                        type="password" 
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#f51c27]/20 focus:border-[#f51c27] outline-none transition-all"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 bg-[#f51c27] text-white rounded-xl font-medium hover:bg-[#d90429] transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <span>Sign In</span>
+                    )}
+                    {!loading && <CheckCircle2 size={18} />}
+                  </button>
+                </form>
+              ) : (
                 <form onSubmit={confirmationResult ? handleVerifyOTP : handlePhoneSubmit} className="space-y-4">
                   {!confirmationResult ? (
                     <div>
@@ -212,7 +284,18 @@ export default function LoginSignupModal({ isOpen, onClose }: LoginSignupModalPr
                     </button>
                   )}
                 </form>
+              )}
 
+              {/* Seamless Admin Toggle */}
+              <div className="mt-6 text-center">
+                <button 
+                  type="button"
+                  onClick={() => setIsAdminLogin(!isAdminLogin)}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {isAdminLogin ? "Return to customer login" : "Restaurant Staff Login"}
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>

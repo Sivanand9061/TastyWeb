@@ -69,6 +69,11 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
         setOrders([]);
       }
       setLoading(false);
+    }, (error) => {
+      console.error("Kitchen orders error:", error);
+      toast.error(`Database error: ${error.message}. Check Realtime Database Rules.`);
+      setOrders([]);
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -358,9 +363,12 @@ function OrderCard({ order, actionText, onAction, color }: { order: Order, actio
         ))}
       </div>
 
-      <div className="text-sm text-gray-400 space-y-1 bg-gray-900/30 p-3 rounded-lg">
-        <p className="flex justify-between"><span className="text-gray-500">Phone:</span> <span className="text-white font-mono">{order.phone}</span></p>
-        <p className="flex justify-between"><span className="text-gray-500">Address:</span> <span className="text-gray-300 text-right w-2/3 truncate">{order.address}</span></p>
+      <div className="text-sm text-gray-400 space-y-2 bg-gray-900/30 p-3 rounded-lg border border-gray-700/50">
+        <div className="flex justify-between items-center bg-gray-800 p-2 rounded-lg border border-gray-700">
+          <span className="text-gray-400 font-medium">Phone:</span> 
+          <span className="text-green-400 font-bold text-[16px] tracking-wider font-mono">{order.phone || "Not Provided"}</span>
+        </div>
+        <p className="flex justify-between pt-1"><span className="text-gray-500">Address:</span> <span className="text-gray-300 text-right w-2/3 truncate">{order.address}</span></p>
         {order.notes && <p className="text-yellow-200/80 italic mt-2 text-xs border-t border-gray-700 pt-2">Note: {order.notes}</p>}
       </div>
 
