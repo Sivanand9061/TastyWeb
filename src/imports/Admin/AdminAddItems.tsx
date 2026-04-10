@@ -55,6 +55,7 @@ const uploadToCloudinary = async (file: File): Promise<string> => {
 interface MenuItem {
   id?: string;
   name: string;
+  nameAr?: string;
   description: string;
   price: string;
   category: string;
@@ -71,7 +72,7 @@ export default function AdminAddItems() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Form state
-  const [formData, setFormData] = useState<MenuItem>({ name: "", description: "", price: "", category: "" });
+  const [formData, setFormData] = useState<MenuItem>({ name: "", nameAr: "", description: "", price: "", category: "" });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -107,7 +108,7 @@ export default function AdminAddItems() {
 
   // Edit item
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", description: "", price: "", category: "" });
+  const [editForm, setEditForm] = useState({ name: "", nameAr: "", description: "", price: "", category: "" });
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -330,7 +331,7 @@ export default function AdminAddItems() {
       if (!res.ok) throw new Error('Failed to add item');
       const newItem = await res.json();
       setMessage({ type: "success", text: `✅ ${formData.name} added!` });
-      setFormData({ name: "", description: "", price: "", category: categories[0] || "" });
+      setFormData({ name: "", nameAr: "", description: "", price: "", category: categories[0] || "" });
       setImageFile(null);
       setImagePreview(null);
       setVariants([]);
@@ -379,6 +380,10 @@ export default function AdminAddItems() {
             <div className="mb-5">
               <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Item Name *</label>
               <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="e.g., Chicken Shawarma" className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
+            </div>
+            <div className="mb-5">
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Arabic Name <span className="text-gray-400 font-normal">(optional)</span></label>
+              <input type="text" name="nameAr" value={formData.nameAr || ""} onChange={handleChange} placeholder="e.g., شاورما دجاج" dir="rtl" className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)] text-right" />
             </div>
             <div className="mb-5">
               <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Description *</label>
@@ -640,7 +645,7 @@ export default function AdminAddItems() {
                     <button
                       onClick={() => {
                         setEditItem(item);
-                        setEditForm({ name: item.name, description: item.description, price: item.price, category: item.category || categories[0] || "" });
+                        setEditForm({ name: item.name, nameAr: item.nameAr || "", description: item.description, price: item.price, category: item.category || categories[0] || "" });
                         setEditImagePreview(item.image || null);
                         setEditImageFile(null);
                         setEditVariants(item.variants || []);
@@ -684,6 +689,10 @@ export default function AdminAddItems() {
               <div>
                 <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Name</label>
                 <input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
+              </div>
+              <div>
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Arabic Name <span className="text-gray-400 font-normal text-[12px]">(optional)</span></label>
+                <input value={editForm.nameAr || ""} onChange={e => setEditForm(p => ({ ...p, nameAr: e.target.value }))} placeholder="e.g., شاورما دجاج" dir="rtl" className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)] text-right" />
               </div>
               <div>
                 <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Description</label>

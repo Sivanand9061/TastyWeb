@@ -163,9 +163,12 @@ interface MenuListProps {
 }
 
 interface MenuItem {
+  id: string;
   name: string;
+  nameAr?: string;
   description: string;
   price: string;
+  category: string;
   available?: boolean;
   image?: string;
   variants?: { label: string; price: string }[];
@@ -227,10 +230,12 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
                   if (item.available !== false) onItemClick(item);
                 }}
               >
-                {/* Top row: text + image */}
                 <div className="flex gap-4 mb-3">
                   <div className="flex-1">
-                    <h3 className="text-[15.5px] font-semibold mb-2">{item.name}</h3>
+                    <h3 className="text-[15.5px] font-semibold mb-1">{item.name}</h3>
+                    {item.nameAr && (
+                      <p className="text-[13px] font-light text-[var(--text-secondary)] mb-2">{item.nameAr}</p>
+                    )}
                     <p className="text-[12.8px] text-gray-700 mb-4">{item.description}</p>
                     {/* Price display */}
                     {item.available === false ? (
@@ -377,7 +382,10 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProp
               </div>
 
               {/* Product Name */}
-              <h2 className="text-[28px] font-bold text-[var(--text-primary)] mb-3">{item.name}</h2>
+              <h2 className="text-[28px] font-bold text-[var(--text-primary)] mb-1">{item.name}</h2>
+              {item.nameAr && (
+                <p className="text-[18px] font-light text-[var(--text-secondary)] mb-3">{item.nameAr}</p>
+              )}
 
               {/* Description */}
               <p className="text-[16px] text-[var(--text-secondary)] mb-6 leading-relaxed">{item.description}</p>

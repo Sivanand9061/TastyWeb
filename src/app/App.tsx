@@ -8,6 +8,7 @@ import KitchenDashboard from '../imports/Admin/KitchenDashboard';
 
 interface CartItem {
   name: string;
+  nameAr?: string;
   description: string;
   price: string;
   quantity: number;

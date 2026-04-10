@@ -46,6 +46,10 @@ export default function ProfileDashboard({ onBackHome }: { onBackHome: () => voi
         setOrders([]);
       }
       setLoading(false);
+    }, (error) => {
+      console.error("Error fetching orders:", error);
+      setOrders([]);
+      setLoading(false);
     });
 
     return () => unsubscribe();

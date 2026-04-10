@@ -19,6 +19,7 @@ const RESTAURANT_LNG = 55.4859;
 
 interface CartItem {
   name: string;
+  nameAr?: string;
   description: string;
   price: string;
   quantity: number;
@@ -104,6 +105,9 @@ function CartItemCard({ item, onRemove, onQuantityChange }: { item: CartItem & {
         
         <div className="flex-1">
           <h3 className="text-[18px] font-bold text-[#1c1c1a] mb-0.5">{item.name}</h3>
+          {item.nameAr && (
+            <p className="text-[13px] font-light text-[#727272] mb-0.5">{item.nameAr}</p>
+          )}
           {item.variant && (
             <p className="text-[12px] font-semibold text-[var(--accent)] mb-1">{item.variant}</p>
           )}
@@ -611,6 +615,15 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [successTotal, setSuccessTotal] = useState("0");
+  const [pendingCheckout, setPendingCheckout] = useState(false);
+
+  useEffect(() => {
+    if (pendingCheckout && currentUser && currentUser.phoneNumber) {
+      setIsLoginModalOpen(false);
+      setIsFormOpen(true);
+      setPendingCheckout(false);
+    }
+  }, [currentUser, pendingCheckout]);
 
   const cartTotal = items
     .reduce((sum, item) => sum + parseFloat(item.price.replace("AED ", "")) * item.quantity, 0)
@@ -762,8 +775,15 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setIsFormOpen(true)}
-              className="w-full bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] py-4 text-[18px] font-bold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all mb-4"
+              onClick={() => {
+                if (!currentUser || !currentUser.phoneNumber) {
+                  setPendingCheckout(true);
+                  setIsLoginModalOpen(true);
+                } else {
+                  setIsFormOpen(true);
+                }
+              }}
+              className="w-full bg-[#f51c27] shadow-lg shadow-red-500/20 rounded-[35px] py-4 text-[18px] font-black text-white hover:bg-[#d90429] transition-all mb-4"
             >
               Place Order
             </motion.button>

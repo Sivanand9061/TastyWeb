@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Neon Pulse - Midnight Velocity</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#243240",
+                        "surface": "#131313",
+                        "outline": "#8d9479",
+                        "error-container": "#93000a",
+                        "on-surface-variant": "#c3caac",
+                        "outline-variant": "#434933",
+                        "secondary-container": "#474746",
+                        "on-secondary-container": "#b7b5b4",
+                        "surface-container": "#201f1f",
+                        "surface-container-low": "#1c1b1b",
+                        "surface-dim": "#131313",
+                        "background": "#131313",
+                        "error": "#ffb4ab",
+                        "surface-container-highest": "#353534",
+                        "surface-container-high": "#2a2a2a",
+                        "surface-tint": "#a1d800",
+                        "on-background": "#e5e2e1",
+                        "on-secondary": "#303030",
+                        "on-secondary-fixed-variant": "#474746",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "tertiary-fixed-dim": "#bac8da",
+                        "tertiary": "#ffffff",
+                        "tertiary-container": "#d6e4f7",
+                        "inverse-on-surface": "#313030",
+                        "on-primary-container": "#506e00",
+                        "on-tertiary-container": "#586676",
+                        "surface-variant": "#353534",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "on-primary-fixed": "#141f00",
+                        "primary-fixed-dim": "#a1d800",
+                        "on-primary-fixed-variant": "#384e00",
+                        "secondary-fixed": "#e5e2e1",
+                        "primary": "#ffffff",
+                        "secondary": "#c8c6c5",
+                        "surface-container-lowest": "#0e0e0e",
+                        "primary-fixed": "#b8f600",
+                        "on-error-container": "#ffdad6",
+                        "primary-container": "#b8f600",
+                        "on-error": "#690005",
+                        "inverse-surface": "#e5e2e1",
+                        "on-tertiary-fixed": "#0f1d2a",
+                        "inverse-primary": "#4b6700",
+                        "on-tertiary-fixed-variant": "#3b4857",
+                        "tertiary-fixed": "#d6e4f7",
+                        "on-surface": "#e5e2e1",
+                        "on-primary": "#263500",
+                        "surface-bright": "#3a3939"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-[#131313] dark:bg-[#131313] flex justify-between items-center w-full px-6 py-4 sticky top-0 z-50">
+<button class="text-[#BFFF00] hover:opacity-80 transition-opacity scale-95 active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-['Plus_Jakarta_Sans'] font-extrabold tracking-tighter uppercase text-2xl italic font-black text-white">NEON PULSE</h1>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container hover:opacity-80 transition-opacity">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="Close-up professional portrait of a young man with clean grooming, soft studio lighting against a dark neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFGa6_vWxj1o-jLxuO1hDJ-4TNFqZb81-ZLLTG57zGE0pZeBLigmjGhK3AEJRNUxqGnKbNPbY8d4isKn1Y5fJ-5CE0eTeuaigHlcYmFkEqBWZOQAPBB2tGUzXuCrFdMU5burDO-z4pHOVHqILRYOUm4wv8Ab-FIK9MYj2hWmOVfIjvkVhfCzgOuUmHpvONX6tnpmixNCQkZDGltOZqzD7UtZssRf5S1AMIn35edNDxWtFsVjk_w-Ikp6mMV19yFwxiEaQI5UF_zstY"/>
+</div>
+</header>
+<main class="px-6 space-y-8">
+<!-- Promotional Banner -->
+<section class="relative w-full h-56 rounded-xl overflow-hidden mt-4 group">
+<div class="absolute inset-0 bg-gradient-to-r from-surface-container-lowest via-transparent to-transparent z-10"></div>
+<img alt="Promo Pizza" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="High-angle shot of a gourmet pepperoni pizza with melting cheese and fresh basil on a dark stone surface, cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2-Jxl2ub5UO8VZANVGZZp2FIHy4hb6ekVS_xu-T73HGXQiXFHmJoIT62tdlP1Jlt54S-jBLzDgLUuxKBlFSBJ1ibNBUpRqj3PC3mnVs6bMAbqE_gZt7wJjR-3QX2sFz0ajGTEG66gFXyNQNpfS2vTmv8GEJDJP7i_Qt5NdmGV7bhO7JLa666y05cPw2QmsPK2ZdOlbnMR6FP8foE-CL-HM7F2t46r421tJFYETFYvSnQS8_UipIzWmVvMqUHoyR47EjI4tAx14MyG"/>
+<div class="relative z-20 h-full flex flex-col justify-center p-8 space-y-2">
+<span class="bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase self-start">Limited Offer</span>
+<h2 class="text-3xl font-black text-white leading-none tracking-tighter">MIDNIGHT<br/>VELOCITY</h2>
+<p class="text-secondary text-sm font-medium">50% OFF ALL SIDES • TONIGHT ONLY</p>
+<button class="mt-4 bg-primary text-surface py-2 px-6 rounded-full font-bold text-xs uppercase tracking-widest self-start active:scale-95 transition-all">Claim Now</button>
+</div>
+</section>
+<!-- Category Scroll -->
+<section class="-mx-6">
+<div class="flex overflow-x-auto px-6 space-x-3 hide-scrollbar">
+<button class="flex-shrink-0 bg-primary-container text-on-primary-container px-6 py-3 rounded-full font-bold text-xs uppercase tracking-widest flex items-center space-x-2">
+<span class="material-symbols-outlined text-lg" data-icon="local_pizza">local_pizza</span>
+<span>Pizza</span>
+</button>
+<button class="flex-shrink-0 bg-surface-container-high text-on-surface-variant px-6 py-3 rounded-full font-bold text-xs uppercase tracking-widest flex items-center space-x-2 hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="lunch_dining">lunch_dining</span>
+<span>Burgers</span>
+</button>
+<button class="flex-shrink-0 bg-surface-container-high text-on-surface-variant px-6 py-3 rounded-full font-bold text-xs uppercase tracking-widest flex items-center space-x-2 hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="set_meal">set_meal</span>
+<span>Sushi</span>
+</button>
+<button class="flex-shrink-0 bg-surface-container-high text-on-surface-variant px-6 py-3 rounded-full font-bold text-xs uppercase tracking-widest flex items-center space-x-2 hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="eco">eco</span>
+<span>Healthy</span>
+</button>
+</div>
+</section>
+<!-- Main Content: Bento-ish 2-column Grid -->
+<section class="space-y-6">
+<div class="flex justify-between items-end">
+<h3 class="text-2xl font-black tracking-tight text-white uppercase">Fastest Near You</h3>
+<span class="text-primary-fixed font-bold text-xs uppercase tracking-widest">See All</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Card 1 -->
+<div class="bg-surface-container rounded-lg overflow-hidden flex flex-col group relative">
+<div class="h-40 w-full overflow-hidden relative">
+<img alt="Cheeseburger" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Extreme close-up of a juicy double smash burger with melted cheddar cheese and steam rising, dark background, sharp focus" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7asCOk2HY7AbAqOT7V1b7lpXK2mVQYhgVy-1_GbRRCjmp3f8cUtS7RrzqA09ddKjkR7Bu9iocRBnzBokpLM3HMrMZfjAmWHAWabl_gViGXM1AV1cDsu3ZV7OSVrUeUr74vJFR85Uo40ycVrvG1jCX88LADvSwXF6Fjkgn5Ab0z_u37pIXdX5VcPh0H1VIFDqupHjXNFkl1ES11QGDqnDNB5F-0wEpttVxYZHOqyeqlLVlhM1LmT3mhWTGpXuVVdioiTclJfIAtjZz"/>
+<div class="absolute top-2 right-2 bg-surface-container-lowest/80 backdrop-blur-md px-2 py-1 rounded-md flex items-center space-x-1">
+<span class="material-symbols-outlined text-[12px] text-primary-fixed" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-[10px] font-bold text-white">4.8</span>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-grow space-y-1 relative">
+<h4 class="text-primary font-bold text-sm tracking-tight leading-tight">Neon Burger Elite</h4>
+<p class="text-on-surface-variant text-[10px] font-medium uppercase tracking-widest">15-20 MIN • $4.99</p>
+<div class="flex items-center justify-between mt-auto pt-2">
+<span class="text-primary-fixed font-black text-lg tracking-tighter">$12.50</span>
+</div>
+<button class="absolute bottom-4 right-4 bg-primary-container text-on-primary-container w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container rounded-lg overflow-hidden flex flex-col group relative">
+<div class="h-40 w-full overflow-hidden relative">
+<img alt="Sushi Rolls" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Exquisite arrangement of sushi rolls on a black slate platter with vibrant salmon and avocado colors, moody low lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9YfEZMXmV5iwueU6c03Xn4Mj_NkP_YlXvfnU5LerekunElD-I721crGPLj3Z11pIGuPy7zzywnipURQ9AZ_tASnIsfYQe_enni_ot-HSeSplMK6rDFUwigTg37yHpED9Qviofr2v5wNMysQmMva27Ax1NXvuz2C6SLTabVWUh0kJG7lRGrGRIAUn2mkWwbPvpfWVmkx0dZVK6CI5MGjht13Lk9A6vF9fFbfPTGgqsVOX1UWAXa32Zl-ZbVuSM6_MRrHDezyd-yn-E"/>
+<div class="absolute top-2 right-2 bg-surface-container-lowest/80 backdrop-blur-md px-2 py-1 rounded-md flex items-center space-x-1">
+<span class="material-symbols-outlined text-[12px] text-primary-fixed" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-[10px] font-bold text-white">4.9</span>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-grow space-y-1 relative">
+<h4 class="text-primary font-bold text-sm tracking-tight leading-tight">Cyber Sushi Bar</h4>
+<p class="text-on-surface-variant text-[10px] font-medium uppercase tracking-widest">25-30 MIN • $5.99</p>
+<div class="flex items-center justify-between mt-auto pt-2">
+<span class="text-primary-fixed font-black text-lg tracking-tighter">$24.00</span>
+</div>
+<button class="absolute bottom-4 right-4 bg-primary-container text-on-primary-container w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container rounded-lg overflow-hidden flex flex-col group relative">
+<div class="h-40 w-full overflow-hidden relative">
+<img alt="Healthy Bowl" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Overhead view of a vibrant Buddha bowl with quinoa, avocado, chickpeas, and fresh greens, bright natural lighting on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKWFhf5N6dkeAYTIosySKpf47WP59_-ezwKVfGoS4FVJGfBzRxk7flvUZDmdo6tUJrXchjov00cMz94LoNJelThwqmZDgOVZWMcZKdmOU51Fod_pB7r7ySp6bE-C3wqaZni-coD2H6nptXYQY7k4KdiU322k2jYjehzE8Dz4iKHvvZgWF69N_RSAz7qjC3OWyfJcU_B_0z-lyE0HvVIb45pE6f-5dLY6VuKgmb35Uc_-cmV9AKU3hrW5-1wnS6jgccMbgjfiUHNwgh"/>
+<div class="absolute top-2 right-2 bg-surface-container-lowest/80 backdrop-blur-md px-2 py-1 rounded-md flex items-center space-x-1">
+<span class="material-symbols-outlined text-[12px] text-primary-fixed" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-[10px] font-bold text-white">4.7</span>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-grow space-y-1 relative">
+<h4 class="text-primary font-bold text-sm tracking-tight leading-tight">Zen Garden Greens</h4>
+<p class="text-on-surface-variant text-[10px] font-medium uppercase tracking-widest">10-15 MIN • FREE</p>
+<div class="flex items-center justify-between mt-auto pt-2">
+<span class="text-primary-fixed font-black text-lg tracking-tighter">$16.20</span>
+</div>
+<button class="absolute bottom-4 right-4 bg-primary-container text-on-primary-container w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface-container rounded-lg overflow-hidden flex flex-col group relative">
+<div class="h-40 w-full overflow-hidden relative">
+<img alt="Pasta" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Close-up of pasta carbonara with creamy sauce and parmesan shavings, dramatic top-down lighting on a dark wooden table" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBthhUdzJoBLrzIyooUmGl_UD5xUH5xsIuFjUNyjWj1l_56feoh5Xu9XfLzO1YdnNnwVtkjxQTFs9b0_ENPmOJc1aYka2IlWdubU3ljT3C1XAwT-I59M_Tv5HnGe8QRzjtBFLBKuiEIpghroBQUTXDO-wx9xRWwID3rGOc0XidjhhDyf52ORi9IsLensdvCK4xlAaQ4Qq9xjqelrDZqeS8NFwx66PARgS2hgaMGpeXkS_37o5u5Wtei6wbUSdoHVPrKexAsEKsB_0uJ"/>
+<div class="absolute top-2 right-2 bg-surface-container-lowest/80 backdrop-blur-md px-2 py-1 rounded-md flex items-center space-x-1">
+<span class="material-symbols-outlined text-[12px] text-primary-fixed" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-[10px] font-bold text-white">4.5</span>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-grow space-y-1 relative">
+<h4 class="text-primary font-bold text-sm tracking-tight leading-tight">Roma Express</h4>
+<p class="text-on-surface-variant text-[10px] font-medium uppercase tracking-widest">30-40 MIN • $2.99</p>
+<div class="flex items-center justify-between mt-auto pt-2">
+<span class="text-primary-fixed font-black text-lg tracking-tighter">$18.90</span>
+</div>
+<button class="absolute bottom-4 right-4 bg-primary-container text-on-primary-container w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-[#201f1f]/80 backdrop-blur-3xl rounded-t-[3rem] shadow-[0_-8px_32px_rgba(184,246,0,0.06)]">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center bg-[#BFFF00] text-[#131313] rounded-full px-6 py-2 hover:scale-110 transition-transform active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-bold uppercase tracking-widest mt-0.5">Home</span>
+</a>
+<!-- Orders -->
+<a class="flex flex-col items-center justify-center text-zinc-500 hover:text-white transition-colors hover:scale-110 transition-transform active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-bold uppercase tracking-widest mt-0.5">Orders</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-zinc-500 hover:text-white transition-colors hover:scale-110 transition-transform active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Plus_Jakarta_Sans'] text-[10px] font-bold uppercase tracking-widest mt-0.5">Profile</span>
+</a>
+</nav>
+<!-- Contextual FAB - Suppression check: On Home, we can show a 'Cart' or 'Support' FAB if needed, but the design specified easy thumb-reach buttons on cards. Adding a floating 'Track' widget for 'Midnight Velocity' feel. -->
+<div class="fixed bottom-32 right-6 z-40">
+<div class="bg-surface-container-lowest border border-primary-container/40 p-4 rounded-lg shadow-[0_0_24px_rgba(184,246,0,0.1)] flex items-center space-x-3">
+<div class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></div>
+<div class="flex flex-col">
+<span class="text-[8px] font-black uppercase text-primary-container tracking-widest">Active Order</span>
+<span class="text-[10px] font-bold text-white">Out for delivery • 8m</span>
+</div>
+<span class="material-symbols-outlined text-primary-container" data-icon="near_me">near_me</span>
+</div>
+</div>
+</body></html>
