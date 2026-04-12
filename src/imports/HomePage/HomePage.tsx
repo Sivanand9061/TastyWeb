@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, Plus, Menu } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 import { useHomepageSettings } from "./useHomepageSettings";
 
 export default function HomePage({
@@ -72,19 +72,6 @@ export default function HomePage({
             />
           </div>
 
-          {/* Menu button — placed cleanly above the white sheet overlap */}
-          <div className="absolute bottom-[56px] left-[32px]" style={{ zIndex: 2 }}>
-            <button
-              onClick={onExploreClick}
-              className="flex items-center gap-2 bg-white/90 backdrop-blur-sm
-                         text-gray-800 px-5 py-2.5 rounded-full shadow-lg
-                         text-[11px] font-black tracking-widest uppercase
-                         hover:bg-white active:scale-95 transition-all"
-            >
-              <Menu size={16} strokeWidth={2.5} />
-              Menu
-            </button>
-          </div>
         </div>
 
         {/* ── WHITE SHEET (normal flow — scrolls up over the sticky hero) ── */}
