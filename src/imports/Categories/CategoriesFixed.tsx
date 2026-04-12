@@ -111,17 +111,22 @@ function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
 
       if (currentActiveIndex !== activeCategory) {
         setActiveCategory(currentActiveIndex);
-        const btn = document.querySelector(`[data-cat-btn="${currentActiveIndex}"]`);
-        if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        const container = document.getElementById('category-tabs-container');
+        const btn = document.querySelector(`[data-cat-btn="${currentActiveIndex}"]`) as HTMLElement | null;
+        if (btn && container) {
+          // Compute left offset natively relative to the container to prevent vertical scroll jacking
+          const scrollLeft = btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2;
+          container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+        }
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [categories, activeCategory]);
 
   return (
-    <div className="overflow-x-auto no-scrollbar scroll-smooth pl-4 pr-4">
+    <div id="category-tabs-container" className="overflow-x-auto no-scrollbar scroll-smooth pl-4 pr-4 relative">
       <div className="flex gap-2 min-w-max pb-1">
         {categories.map((category, index) => {
           const isActive = activeCategory === index;
@@ -132,10 +137,14 @@ function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
               onClick={() => {
                 setActiveCategory(index);
                 onCategoryClick(index);
-                const btn = document.querySelector(`[data-cat-btn="${index}"]`);
-                if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                const container = document.getElementById('category-tabs-container');
+                const btn = document.querySelector(`[data-cat-btn="${index}"]`) as HTMLElement | null;
+                if (btn && container) {
+                  const scrollLeft = btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2;
+                  container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+                }
               }}
-              className={`px-5 py-2.5 rounded-[12px] text-[13px] font-bold transition-all ${isActive
+              className={`px-5 py-2.5 rounded-[12px] text-[13px] font-bold transition-all relative ${isActive
                   ? 'bg-[#f51c27] text-white shadow-sm'
                   : 'bg-[#f6f6f6] text-gray-600 hover:bg-gray-200'
                 }`}
