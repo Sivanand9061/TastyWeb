@@ -8,7 +8,7 @@ import { Plus } from "lucide-react";
 import { ref, get } from "firebase/database";
 import { db } from "../../firebase";
 
-
+const DEFAULT_CATEGORIES = ["Pizza", "Burgers", "Pasta", "Desserts", "Drinks", "Salads"];
 function TopBar({ onBackHome, cartItemsCount = 0, onNavigateToCart }: { onBackHome?: () => void; cartItemsCount?: number; onNavigateToCart?: () => void }) {
   return (
     <div className="sticky top-0 z-50 bg-[var(--topbar-bg)] backdrop-blur-sm shadow-[var(--topbar-shadow)] rounded-[35px] mx-4 mt-5 mb-4 h-[70px]">
