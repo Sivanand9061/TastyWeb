@@ -5,6 +5,7 @@ import CartPage from '../imports/CartPage/CartPage';
 import AdminAddItems from '../imports/Admin/AdminAddItems';
 import ProfileDashboard from '../imports/Profile/ProfileDashboard';
 import KitchenDashboard from '../imports/Admin/KitchenDashboard';
+import PwaInstallPrompt from '../components/PwaInstallPrompt';
 
 import { Utensils, ReceiptText, ShoppingBag, User as UserIcon, Home } from 'lucide-react';
 import { useAuth } from './AuthContext';
@@ -206,6 +207,9 @@ export default function App() {
       )}
 
       <LoginSignupModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+
+      {/* PWA install prompt — shown after sign in */}
+      <PwaInstallPrompt />
     </div>
   );
 }

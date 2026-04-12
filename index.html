@@ -34,6 +34,17 @@
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/images/hero.jpeg" />
+    <link rel="apple-touch-icon" href="/images/hero.jpeg" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Register short service worker for PWA -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
 
     <!-- Google Structured Data (Restaurant Business) -->
     <script type="application/ld+json">
