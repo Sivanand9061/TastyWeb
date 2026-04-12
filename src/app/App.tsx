@@ -6,6 +6,11 @@ import AdminAddItems from '../imports/Admin/AdminAddItems';
 import ProfileDashboard from '../imports/Profile/ProfileDashboard';
 import KitchenDashboard from '../imports/Admin/KitchenDashboard';
 
+import { Utensils, ReceiptText, ShoppingBag, User as UserIcon } from 'lucide-react';
+import { useAuth } from './AuthContext';
+import LoginSignupModal from '../imports/Auth/LoginSignupModal';
+import { useHomepageSettings } from '../imports/HomePage/useHomepageSettings';
+
 interface CartItem {
   name: string;
   nameAr?: string;
@@ -25,6 +30,10 @@ export default function App() {
     const saved = localStorage.getItem('cartItems');
     return saved ? JSON.parse(saved) : [];
   });
+
+  const { currentUser, isAdmin } = useAuth();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const { settings } = useHomepageSettings();
 
   // Persist current page to localStorage
   useEffect(() => {
@@ -86,36 +95,117 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const isShellPage = currentPage === 'home' || currentPage === 'menu' || currentPage === 'profile';
+
   return (
-    <div className="size-full">
-      {currentPage === 'home' ? (
-        <HomePage onExploreClick={handleExploreMenu} cartItemsCount={cartItems.length} onNavigateToCart={handleGoToCart} onNavigateToAdmin={handleGoToAdmin} onNavigateToProfile={handleGoToProfile} />
-      ) : currentPage === 'menu' ? (
-        <Categories onBackHome={handleBackToHome} onAddToCart={handleAddToCart} cartItemsCount={cartItems.length} onNavigateToCart={handleGoToCart} />
-      ) : currentPage === 'cart' ? (
-        <CartPage cartItems={cartItems} onBackHome={handleBackToHome} onContinueShopping={handleContinueShopping} onClearCart={handleClearCart} onNavigateToProfile={handleGoToProfile} />
-      ) : currentPage === 'admin' ? (
-        <div className="w-full min-h-screen">
+    <div className="size-full bg-white relative pb-20">
+      {/* Global White Header for App Shell */}
+      {isShellPage && (
+        <div className="sticky top-0 z-50 bg-[#eaeaec] h-[60px] flex items-center justify-between px-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)]">
+          <div className="h-[60px] cursor-pointer flex items-center pl-2 relative" onClick={handleBackToHome}>
+            <img alt="Tasty Hot Logo" className="h-[60px] w-auto max-w-[200px] object-contain object-left transform scale-[2] origin-left translate-x-2" src={settings.logoImage} />
+          </div>
+          
+          <div className="flex-1" />
+          
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <button
+                onClick={handleGoToAdmin}
+                className="text-[10px] font-bold bg-[#f51c27] text-white px-2 py-1 rounded hover:bg-[#d90429] transition-colors shadow-sm"
+              >
+                ADMIN
+              </button>
+            )}
+            <button 
+              onClick={() => currentUser ? handleGoToProfile() : setIsLoginModalOpen(true)} 
+              className="w-8 h-8 rounded-full bg-[#1c2938] border-2 border-white flex items-center justify-center overflow-hidden shadow-sm"
+            >
+               {currentUser ? (
+                 <UserIcon size={16} className="text-white" />
+               ) : (
+                 <UserIcon size={16} className="text-white opacity-50" />
+               )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Pages */}
+      <main className="w-full">
+        {currentPage === 'home' ? (
+          <HomePage onExploreClick={handleExploreMenu} cartItemsCount={cartItems.length} onNavigateToCart={handleGoToCart} onNavigateToAdmin={handleGoToAdmin} onNavigateToProfile={handleGoToProfile} />
+        ) : currentPage === 'menu' ? (
+          <Categories onBackHome={handleBackToHome} onAddToCart={handleAddToCart} cartItemsCount={cartItems.length} onNavigateToCart={handleGoToCart} />
+        ) : currentPage === 'cart' ? (
+          <CartPage cartItems={cartItems} onBackHome={handleBackToHome} onContinueShopping={handleContinueShopping} onClearCart={handleClearCart} onNavigateToProfile={handleGoToProfile} />
+        ) : currentPage === 'admin' ? (
+          <div className="w-full min-h-screen">
+            <button 
+              onClick={handleBackToHome}
+              className="fixed top-4 left-4 bg-[#f51c27] text-white px-4 py-2 rounded-[12px] font-bold hover:bg-[#d90429] z-50"
+            >
+              ← Back
+            </button>
+            <AdminAddItems />
+            
+            <button 
+              onClick={() => setCurrentPage('kitchen')}
+              className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 border-[4px] border-white rounded-[12px] font-bold hover:bg-green-600 shadow-xl z-50 flex items-center gap-2"
+            >
+              Launch Kitchen Dashboard 👨‍🍳
+            </button>
+          </div>
+        ) : currentPage === 'profile' ? (
+          <ProfileDashboard onBackHome={handleBackToHome} />
+        ) : currentPage === 'kitchen' ? (
+          <KitchenDashboard onBackHome={handleBackToHome} />
+        ) : null}
+      </main>
+
+      {/* Global Sticky Bottom Navigation Tab Bar */}
+      {isShellPage && (
+        <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-gray-100 flex items-center justify-around py-2 pt-3 pb-6 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-[20px]">
           <button 
-            onClick={handleBackToHome}
-            className="fixed top-4 left-4 bg-[#f51c27] text-white px-4 py-2 rounded-[12px] font-bold hover:bg-[#d90429] z-50"
+            onClick={handleExploreMenu}
+            className={`flex flex-col items-center gap-1 w-1/4 ${currentPage === 'menu' ? 'text-[#f51c27]' : 'text-gray-400'}`}
           >
-            ← Back
+            <Utensils size={22} strokeWidth={currentPage === 'menu' ? 2.5 : 2} />
+            <span className="text-[9px] font-black tracking-widest uppercase">Discover</span>
           </button>
-          <AdminAddItems />
           
           <button 
-            onClick={() => setCurrentPage('kitchen')}
-            className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 border-[4px] border-white rounded-[12px] font-bold hover:bg-green-600 shadow-xl z-50 flex items-center gap-2"
+            onClick={handleGoToProfile}
+            className={`flex flex-col items-center gap-1 w-1/4 ${currentPage === 'profile' ? 'text-[#f51c27]' : 'text-gray-400'}`}
           >
-            Launch Kitchen Dashboard 👨‍🍳
+            <ReceiptText size={22} strokeWidth={currentPage === 'profile' ? 2.5 : 2} />
+            <span className="text-[9px] font-black tracking-widest uppercase">Orders</span>
+          </button>
+          
+          <button 
+            onClick={handleGoToCart}
+            className={`flex flex-col items-center gap-1 w-1/4 relative ${currentPage === 'cart' ? 'text-[#f51c27]' : 'text-gray-400'}`}
+          >
+            <ShoppingBag size={22} strokeWidth={currentPage === 'cart' ? 2.5 : 2} />
+            {cartItems.length > 0 && (
+              <div className="absolute top-[-4px] right-4 bg-[#f51c27] text-white text-[10px] font-bold w-4 h-4 flex justify-center items-center rounded-full border border-white">
+                {cartItems.length}
+              </div>
+            )}
+            <span className="text-[9px] font-black tracking-widest uppercase">Cart</span>
+          </button>
+          
+          <button 
+            onClick={handleGoToProfile}
+            className={`flex flex-col items-center gap-1 w-1/4 ${currentPage === 'profile' ? 'text-[#f51c27]' : 'text-gray-400'}`}
+          >
+            <UserIcon size={22} strokeWidth={currentPage === 'profile' ? 2.5 : 2} />
+            <span className="text-[9px] font-black tracking-widest uppercase">Profile</span>
           </button>
         </div>
-      ) : currentPage === 'profile' ? (
-        <ProfileDashboard onBackHome={handleBackToHome} />
-      ) : currentPage === 'kitchen' ? (
-        <KitchenDashboard onBackHome={handleBackToHome} />
-      ) : null}
+      )}
+
+      <LoginSignupModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
     </div>
   );
 }

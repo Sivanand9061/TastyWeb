@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import imgLogoPng from "../Categories/fe9439b0b5b8f4134a87490c14dd926f577a90d9.png";
-import imgWhatsApp from "../Categories/ed00f9add7cd5cb0ff88532464058a5e59bc4497.png";
-import imgImage1 from "../Categories/99fddedb4828ce247ec845e7f4b3ade3c1715928.png";
-import svgPaths from "../Categories/svg-k7l7daq8c2";
 import { useAuth } from "../../app/AuthContext";
 import { User, LogIn } from "lucide-react";
 import LoginSignupModal from "../Auth/LoginSignupModal";
@@ -161,6 +157,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
   });
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Clear form when modal opens, and auto-fill if user logged in
   useEffect(() => {
@@ -192,6 +189,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
       }
       setErrors({});
       setDistanceError("");
+      setIsSubmitting(false);
     }
   }, [isOpen, currentUser]);
 
@@ -282,6 +280,8 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     if (validateForm()) {
       if (formData.lat && formData.lng) {
         const distance = calculateDistance(RESTAURANT_LAT, RESTAURANT_LNG, formData.lat, formData.lng);
@@ -291,17 +291,22 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
         }
       }
 
-      if (currentUser) {
-        // Save these details as the user's default for next time
-        await update(ref(db, `users/${currentUser.uid}`), {
-          name: formData.name,
-          address: formData.address,
-          lat: formData.lat || null,
-          lng: formData.lng || null,
-          phone: formData.phone
-        });
+      setIsSubmitting(true);
+      try {
+        if (currentUser) {
+          // Save these details as the user's default for next time
+          await update(ref(db, `users/${currentUser.uid}`), {
+            name: formData.name,
+            address: formData.address,
+            lat: formData.lat || null,
+            lng: formData.lng || null,
+            phone: formData.phone
+          });
+        }
+        await onSubmit(formData);
+      } finally {
+        setIsSubmitting(false);
       }
-      onSubmit(formData);
     }
   };
 
@@ -443,10 +448,20 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={Object.values(errors).some(err => err.length > 0) || !formData.name.trim() || !formData.address.trim() || !!distanceError}
-                  className="w-full bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] py-4 text-[18px] font-semibold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmitting || Object.values(errors).some(err => err.length > 0) || !formData.name.trim() || !formData.address.trim() || !!distanceError}
+                  className="w-full bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] py-4 text-[18px] font-semibold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Confirm Order
+                  {isSubmitting ? (
+                    <>
+                      <svg className="w-5 h-5 animate-spin text-[#f51c27]" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    "Confirm Order"
+                  )}
                 </button>
               </form>
             </div>
@@ -698,9 +713,8 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
   };
 
   return (
-    <div className="min-h-screen bg-[#fbf4e8] relative overflow-hidden flex flex-col items-center">
-      <div className="w-full max-w-[1280px] min-h-screen flex flex-col relative z-10 px-2 lg:px-4">
-        <TopBar onBackHome={onBackHome} cartItemsCount={items.length} onNavigateToAdmin={() => {}} onNavigateToProfile={onNavigateToProfile} onLoginClick={() => setIsLoginModalOpen(true)} />
+    <div className="bg-white relative overflow-hidden flex flex-col items-center pt-2">
+      <div className="w-full max-w-[1280px] min-h-[calc(100vh-100px)] flex flex-col relative z-10 px-2 lg:px-4">
       
       {!currentUser && (
         <div className="mx-4 mt-2 mb-4 bg-white p-4 rounded-2xl flex items-center justify-between border border-[#e0e0e0] shadow-sm max-w-2xl sm:mx-auto w-[calc(100%-2rem)]">

@@ -4,10 +4,10 @@ import imgWhatsApp from "./ed00f9add7cd5cb0ff88532464058a5e59bc4497.png";
 import imgImage1 from "./99fddedb4828ce247ec845e7f4b3ade3c1715928.png";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { Plus } from "lucide-react";
 import { ref, get } from "firebase/database";
 import { db } from "../../firebase";
 
-const DEFAULT_CATEGORIES = ["Pizza", "Burgers", "Pasta", "Desserts", "Drinks", "Salads"];
 
 function TopBar({ onBackHome, cartItemsCount = 0, onNavigateToCart }: { onBackHome?: () => void; cartItemsCount?: number; onNavigateToCart?: () => void }) {
   return (
@@ -72,20 +72,18 @@ interface SearchBarProps {
 
 function SearchBar({ value, onChange }: SearchBarProps) {
   return (
-    <div className="mx-4 mb-6">
-      <div className="relative">
+    <div className="mx-4 mb-3">
+      <div className="relative flex items-center bg-[#f6f6f6] rounded-[10px] h-[44px] px-4">
+        <svg className="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
         <input
           type="text"
-          placeholder="Search"
+          placeholder="Search for flavors..."
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full h-[51px] px-12 border border-[var(--bg-input-border)] rounded-[32px] text-[var(--text-secondary)] text-[21px] placeholder:text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)] bg-transparent"
+          className="flex-1 bg-transparent text-[14px] text-gray-800 placeholder-gray-400 focus:outline-none"
         />
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px]">
-          <svg className="w-full h-full" fill="none" viewBox="0 0 18 18">
-            <path d={svgPaths.p8a35e00} fill="var(--text-primary)" />
-          </svg>
-        </div>
       </div>
     </div>
   );
@@ -98,53 +96,51 @@ interface CategoryTabsProps {
 
 function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
   const [activeCategory, setActiveCategory] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const handleCategoryClick = (index: number) => {
-    setActiveCategory(index);
-    onCategoryClick(index);
-    // Pan the tab strip so the active tab is centred — scrollTo on the
-    // container only, never the whole page.
-    const btn = buttonRefs.current[index];
-    const container = containerRef.current;
-    if (btn && container) {
-      const target = btn.offsetLeft - container.clientWidth / 2 + btn.offsetWidth / 2;
-      container.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
-    }
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 250;
+      let currentActiveIndex = 0;
+
+      categories.forEach((_, index) => {
+        const el = document.querySelector(`[data-cat="${index}"]`) as HTMLElement | null;
+        if (el && el.offsetTop <= scrollPosition) {
+          currentActiveIndex = index;
+        }
+      });
+
+      if (currentActiveIndex !== activeCategory) {
+        setActiveCategory(currentActiveIndex);
+        const btn = document.querySelector(`[data-cat-btn="${currentActiveIndex}"]`);
+        if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [categories, activeCategory]);
 
   return (
-    <div className="sticky top-[105px] z-40 bg-[var(--bg-primary)] border-t border-b border-[var(--item-border)] mb-6">
-      <div
-        ref={containerRef}
-        className="flex items-center gap-1 overflow-x-auto scrollbar-hide px-3"
-      >
+    <div className="overflow-x-auto no-scrollbar scroll-smooth pl-4 pr-4">
+      <div className="flex gap-2 min-w-max pb-1">
         {categories.map((category, index) => {
           const isActive = activeCategory === index;
           return (
             <button
               key={category}
-              ref={(el) => { buttonRefs.current[index] = el; }}
-              onClick={() => handleCategoryClick(index)}
-              className="relative flex-shrink-0 px-4 py-3 text-[15px] font-medium transition-all duration-200"
-              style={{
-                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                opacity: isActive ? 1 : 0.5,
-                fontWeight: isActive ? '700' : '500',
+              data-cat-btn={index}
+              onClick={() => {
+                setActiveCategory(index);
+                onCategoryClick(index);
+                const btn = document.querySelector(`[data-cat-btn="${index}"]`);
+                if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
               }}
+              className={`px-5 py-2.5 rounded-[12px] text-[13px] font-bold transition-all ${isActive
+                  ? 'bg-[#f51c27] text-white shadow-sm'
+                  : 'bg-[#f6f6f6] text-gray-600 hover:bg-gray-200'
+                }`}
             >
-              {category}
-              {/* Pill indicator — scales from 0 → 1 on active */}
-              <span
-                className="absolute bottom-0 left-1/2 h-[3px] rounded-full bg-[var(--accent)] transition-all duration-300 ease-out"
-                style={{
-                  width: '60%',
-                  transform: `translateX(-50%) scaleX(${isActive ? 1 : 0})`,
-                  opacity: isActive ? 1 : 0,
-                  transformOrigin: 'center',
-                }}
-              />
+              {category === "Pizza" && index === 0 ? "All Menu" : category}
             </button>
           );
         })}
@@ -175,13 +171,13 @@ interface MenuItem {
 }
 
 function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData, onAddToCart }: MenuListProps) {
-  
+
   const filteredMenuData = () => {
     if (!searchQuery.trim()) return menuData;
-    
+
     const filtered: Record<string, MenuItem[]> = {};
     const query = searchQuery.toLowerCase();
-    
+
     Object.entries(menuData).forEach(([category, items]) => {
       const filteredItems = items.filter(item =>
         item.name.toLowerCase().includes(query) ||
@@ -191,7 +187,7 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
         filtered[category] = filteredItems;
       }
     });
-    
+
     return filtered;
   };
 
@@ -207,7 +203,16 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
   const visibleCategories = categories.filter(cat => cat in filtered);
 
   return (
-    <div className="px-4 pb-20">
+    <div className="px-4 pb-20 pt-2">
+      <div className="mb-6">
+        <h1 className="font-heading text-[32px] font-black uppercase text-[#1c2938] leading-none mb-1">
+          CRAFTED WITH <span className="text-[#f51c27] italic">FIRE</span>
+        </h1>
+        <p className="text-gray-500 text-[13px] leading-snug max-w-[280px]">
+          Our signature recipes are built to perfection with premium ingredients.
+        </p>
+      </div>
+
       {visibleCategories.length === 0 && searchQuery ? (
         <div className="py-12 text-center">
           <p className="text-[#727272] text-[18px]">No items found for "{searchQuery}"</p>
@@ -217,89 +222,96 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
         const categoryIndex = categories.indexOf(category);
         return (
           <div key={category} ref={categoryRefs[categoryIndex]} data-cat={categoryIndex} className="scroll-mt-[140px]">
-            <h2 className="text-[24px] font-bold text-[var(--text-primary)] mb-6 mt-8">{category}</h2>
+            <h2 className="text-[22px] font-heading font-black text-[#1c2938] uppercase tracking-wide mb-4 mt-8">{category}</h2>
             {filtered[category as keyof typeof filtered].map((item, itemIndex) => {
               const hasVariants = item.variants && item.variants.length > 0;
               return (
-              <div
-                key={itemIndex}
-                className={`pb-9 mb-9 border-b border-[var(--item-border)] ${item.available !== false && !hasVariants ? 'cursor-pointer' : ''} -mx-4 px-4 rounded-lg transition-colors`}
-                onClick={() => {
-                  // For variant items: tapping the card opens the detail view
-                  // For regular available items: same behaviour
-                  if (item.available !== false) onItemClick(item);
-                }}
-              >
-                <div className="flex gap-4 mb-3">
-                  <div className="flex-1">
-                    <h3 className="text-[15.5px] font-semibold mb-1">{item.name}</h3>
-                    {item.nameAr && (
-                      <p className="text-[13px] font-light text-[var(--text-secondary)] mb-2">{item.nameAr}</p>
-                    )}
-                    <p className="text-[12.8px] text-gray-700 mb-4">{item.description}</p>
-                    {/* Price display */}
-                    {item.available === false ? (
-                      <span className="text-red-500 text-[12px] font-bold px-4 py-2 border border-red-500 rounded-[35px]">
-                        OUT OF STOCK
-                      </span>
-                    ) : !hasVariants ? (
-                      /* Normal item — price + Add button in a row */
-                      <div className="flex items-center justify-between">
-                        <p className="text-[15.5px] font-semibold text-[var(--text-price)]">AED {item.price}</p>
-                        <button
-                          onClick={(e) => handleAddToCart(e, item)}
-                          className="bg-[var(--btn-add-bg)] backdrop-blur-sm shadow-[var(--topbar-shadow)] rounded-[35px] px-4 py-2 text-[12px] font-medium text-[var(--accent)] hover:bg-[var(--btn-add-hover)] transition-all"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    ) : (
-                      /* Variant item — just show starting price; selector is below */
-                      <p className="text-[15.5px] font-semibold text-[var(--text-price)]">
-                        From AED {Math.min(...item.variants!.map(v => parseFloat(v.price))).toFixed(0)}
-                      </p>
-                    )}
-                  </div>
-                  <div className="w-[110px] h-[100px] rounded-[20px] flex-shrink-0 overflow-hidden bg-gradient-to-br from-[var(--img-placeholder-from)] to-[var(--img-placeholder-to)]">
-                    {item.image ? (
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>
-                    )}
-                  </div>
-                </div>
+                <div
+                  key={itemIndex}
+                  className={`pb-6 mb-6 border-b border-gray-100 ${item.available !== false && !hasVariants ? 'cursor-pointer' : ''} transition-colors`}
+                  onClick={() => {
+                    if (item.available !== false) onItemClick(item);
+                  }}
+                >
+                  <div className="flex gap-4">
+                    <div className="w-[84px] h-[84px] rounded-[14px] flex-shrink-0 overflow-hidden bg-gray-100 shadow-sm border border-black/5">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-3xl opacity-50">🍽️</div>
+                      )}
+                    </div>
 
-                {/* Variant size selector row — only shown for variant items */}
-                {hasVariants && item.available !== false && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex gap-2 flex-wrap"
-                  >
-                    {item.variants!.map(v => (
-                      <button
-                        key={v.label}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onAddToCart) {
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            onAddToCart({ ...item, price: v.price, quantity: 1, variant: v.label } as any);
-                          }
-                        }}
-                        className="flex items-center gap-1.5 bg-[var(--btn-add-bg)] border border-[var(--accent)]/20 backdrop-blur-sm rounded-[35px] px-4 py-2 hover:bg-[var(--accent)] hover:text-white transition-all duration-200 group"
-                      >
-                        <span className="text-[12px] font-bold text-[var(--accent)] group-hover:text-white">{v.label}</span>
-                        <span className="text-[11px] text-[var(--text-secondary)] group-hover:text-white/80">· AED {v.price}</span>
-                      </button>
-                    ))}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onItemClick(item); }}
-                      className="flex items-center gap-1 px-3 py-2 text-[11px] text-[var(--text-secondary)] opacity-50 hover:opacity-75 transition-opacity"
-                    >
-                      More info ›
-                    </button>
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="text-[15.5px] font-bold text-gray-900 leading-tight">{item.name}</h3>
+                        {item.available !== false ? (
+                          <p className="text-[#f51c27] font-black text-[15px] shrink-0">
+                            ${!hasVariants ? item.price : Math.min(...item.variants!.map(v => parseFloat(v.price))).toFixed(0)}
+                          </p>
+                        ) : (
+                          <span className="text-red-500 text-[10px] font-bold px-2 py-1 bg-red-50 rounded-full shrink-0">OUT OF STOCK</span>
+                        )}
+                      </div>
+
+                      <p className="text-[13px] text-gray-500 mt-1 line-clamp-2 leading-snug pr-2">{item.description}</p>
+
+                      <div className="flex items-center justify-between mt-3">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {/* Dynamic Tags */}
+                          {item.name.toLowerCase().includes('signature') && (
+                            <span className="bg-red-50 text-[#f51c27] text-[9px] font-bold px-2 py-0.5 rounded-[4px] tracking-widest uppercase">
+                              MOST POPULAR
+                            </span>
+                          )}
+                          {item.name.toLowerCase().includes('spicy') || item.name.toLowerCase().includes('inferno') ? (
+                            <span className="text-[10px]">🔥 🔥</span>
+                          ) : null}
+                          {item.category === "Sides" && (
+                            <span className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">SIDE ITEM</span>
+                          )}
+                          {item.category === "Drinks" && (
+                            <span className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">BEVERAGE</span>
+                          )}
+                        </div>
+
+                        {item.available !== false && !hasVariants && (
+                          <button
+                            onClick={(e) => handleAddToCart(e, item)}
+                            className="bg-[#f51c27] w-7 h-7 rounded-full flex items-center justify-center text-white shadow-md active:scale-95 transition-transform shrink-0"
+                          >
+                            <Plus size={16} strokeWidth={3} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Variant size selector row */}
+                  {hasVariants && item.available !== false && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex gap-2 flex-wrap mt-3 pl-[100px]"
+                    >
+                      {item.variants!.map(v => (
+                        <button
+                          key={v.label}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onAddToCart) {
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              onAddToCart({ ...item, price: v.price, quantity: 1, variant: v.label } as any);
+                            }
+                          }}
+                          className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 hover:bg-[#f51c27] hover:text-white hover:border-[#f51c27] transition-all duration-200 group"
+                        >
+                          <span className="text-[11px] font-bold text-gray-700 group-hover:text-white">{v.label}</span>
+                          <span className="text-[10px] text-gray-500 group-hover:text-white/90">· ${v.price}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -357,7 +369,7 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProp
             onClick={onClose}
             className="fixed inset-0 bg-black/50 z-[60]"
           />
-          
+
           {/* Modal */}
           <motion.div
             initial={{ y: "100%" }}
@@ -401,11 +413,10 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProp
                         <button
                           key={v.label}
                           onClick={() => setSelectedVariant(v)}
-                          className={`px-5 py-2.5 rounded-[35px] text-[15px] font-semibold border-2 transition-all duration-200 ${
-                            isSelected
+                          className={`px-5 py-2.5 rounded-[35px] text-[15px] font-semibold border-2 transition-all duration-200 ${isSelected
                               ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-md scale-[1.04]'
                               : 'bg-transparent border-[var(--bg-card-border)] text-[var(--text-secondary)] hover:border-[var(--accent)]'
-                          }`}
+                            }`}
                         >
                           {v.label} &nbsp;·&nbsp; AED {v.price}
                         </button>
@@ -526,7 +537,7 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
     try {
       const raw = localStorage.getItem(CACHE_CATS_KEY);
       if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed) && parsed.length > 0) return parsed; }
-    } catch {}
+    } catch { }
     return DEFAULT_CATEGORIES;
   };
 
@@ -547,7 +558,7 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
         const items = JSON.parse(raw) as (MenuItem & { category: string })[];
         if (Array.isArray(items) && items.length > 0) return buildOrganized(cats, items);
       }
-    } catch {}
+    } catch { }
     return null;
   };
 
@@ -565,24 +576,33 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-        // Fetch both sources in parallel
-        const [catSnap, response] = await Promise.all([
-          get(ref(db, 'settings/categories')),
-          fetch(`${apiUrl}/api/menu`),
-        ]);
-
-        // Resolve categories
+        // Fetch categories safely
         let cats = DEFAULT_CATEGORIES;
-        if (catSnap.exists()) {
-          const saved = catSnap.val();
-          if (Array.isArray(saved) && saved.length > 0) cats = saved;
+        try {
+          const catSnap = await get(ref(db, 'settings/categories'));
+          if (catSnap.exists()) {
+            const saved = catSnap.val();
+            if (Array.isArray(saved) && saved.length > 0) Object.assign(cats, saved);
+            // Wait, wait, actually let's reconstruct the arrays normally.
+            if (Array.isArray(saved) && saved.length > 0) cats = saved;
+          }
+        } catch (e) {
+          console.error("Categories fetch failed", e);
         }
 
-        // Resolve menu items
-        const items: (MenuItem & { category: string })[] = await response.json();
-        const organized = buildOrganized(cats, Array.isArray(items) ? items : []);
+        // Fetch menu items safely
+        let items: (MenuItem & { category: string })[] = [];
+        try {
+          const response = await fetch(`${apiUrl}/api/menu`);
+          const resItems = await response.json();
+          if (Array.isArray(resItems)) items = resItems;
+        } catch (e) {
+          console.error("Backend fetch failed. Is the server running on port 5000?", e);
+        }
 
-        // Update UI (background refresh — user may already be browsing cached data)
+        const organized = buildOrganized(cats, items);
+
+        // Update UI 
         setCategories(cats);
         setMenuData(organized);
 
@@ -590,7 +610,7 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
         localStorage.setItem(CACHE_CATS_KEY, JSON.stringify(cats));
         localStorage.setItem(CACHE_MENU_KEY, JSON.stringify(items));
       } catch (error) {
-        console.error('Failed to fetch menu:', error);
+        console.error('Core fetch error:', error);
       } finally {
         setLoading(false);
       }
@@ -604,8 +624,8 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
     // how React manages the ref array across renders.
     const el = document.querySelector(`[data-cat="${index}"]`) as HTMLElement | null;
     if (!el) return;
-    // Offset = topbar (105px) + category strip (~58px) + small gap
-    const STICKY_OFFSET = 172;
+    // Offset = topbar (~105px) + search container (~60px) + category strip (~58px) + gaps
+    const STICKY_OFFSET = 240;
     const top = el.getBoundingClientRect().top + window.scrollY - STICKY_OFFSET;
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   };
@@ -639,13 +659,16 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
-      <TopBar onBackHome={onBackHome} cartItemsCount={cartItemsCount} onNavigateToCart={onNavigateToCart} />
+    <div className="min-h-screen bg-white flex flex-col pt-4">
       <div className="flex-1">
-        <HeroSection />
-        <SearchBar value={searchQuery} onChange={setSearchQuery} />
-        <InfoCard />
-        <CategoryTabs categories={categories} onCategoryClick={handleCategoryClick} />
+        {/* Challenge Accepted: The Mega Sticky Strip (Integrated with TopBar) */}
+        <div
+          className="sticky z-[45] bg-white pt-2 pb-3 shadow-[0_4px_10px_rgba(0,0,0,0.03)] border-b border-gray-100 mb-6"
+          style={{ top: '60px', position: 'sticky', width: '100%' }}
+        >
+          <SearchBar value={searchQuery} onChange={setSearchQuery} />
+          <CategoryTabs categories={categories} onCategoryClick={handleCategoryClick} />
+        </div>
 
         {/* Skeleton — only shown to true first-time visitors with no cache */}
         {loading ? (
@@ -673,18 +696,48 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
         )}
       </div>
       <ProductDetail item={selectedItem} isOpen={isProductDetailOpen} onClose={closeProductDetail} onAddToCart={handleAddItemToCart} />
-      
+
+      {/* Floating Cart Capsule */}
+      <AnimatePresence>
+        {cartItemsCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 50 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md z-[60]"
+          >
+            <button
+              onClick={onNavigateToCart}
+              className="w-full bg-[var(--accent)] text-white rounded-full p-4 flex items-center justify-between shadow-[0_8px_30px_rgb(245,28,39,0.3)] active:scale-95 transition-transform"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
+                  {cartItemsCount}
+                </div>
+                <span className="font-bold text-[18px]">View Cart</span>
+              </div>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Toast Notification */}
-      {toastMessage && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[var(--toast-bg)] text-white px-6 py-4 rounded-[35px] shadow-lg z-50 font-medium"
-        >
-          {toastMessage}
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-[180px] left-1/2 -translate-x-1/2 bg-[var(--toast-bg)] text-white px-6 py-4 rounded-[35px] shadow-lg z-50 font-medium"
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

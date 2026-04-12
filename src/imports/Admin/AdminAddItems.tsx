@@ -7,6 +7,7 @@ import { db } from "../../firebase";
 import { toast } from "sonner";
 import { Trash2, Plus, AlertTriangle, ImagePlus, X, Palette, Pencil } from "lucide-react";
 import { themes, getThemeById, applyTheme, DEFAULT_THEME } from "../../themes";
+import { defaultHomepageSettings, type HomepageSettings } from "../HomePage/useHomepageSettings";
 
 // ─── Image helpers ────────────────────────────────────────────────
 const resizeImage = (file: File, maxWidth = 900): Promise<Blob> =>
@@ -20,7 +21,12 @@ const resizeImage = (file: File, maxWidth = 900): Promise<Blob> =>
       canvas.width = width; canvas.height = height;
       canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
-      canvas.toBlob(b => b ? resolve(b) : reject(new Error('Resize failed')), 'image/jpeg', 0.85);
+      const isPng = file.type === 'image/png';
+      canvas.toBlob(
+        b => b ? resolve(b) : reject(new Error('Resize failed')),
+        isPng ? 'image/png' : 'image/jpeg',
+        isPng ? undefined : 0.85
+      );
     };
     img.onerror = () => reject(new Error('Load failed'));
     img.src = url;
@@ -33,7 +39,8 @@ const uploadToCloudinary = async (file: File): Promise<string> => {
   if (!cloud || !preset) throw new Error(`Cloudinary env vars missing (cloud="${cloud}", preset="${preset}")`);
   const blob = await resizeImage(file);
   const fd = new FormData();
-  fd.append('file', blob, 'menu-item.jpg');
+  const fileExt = file.type === 'image/png' ? 'png' : 'jpg';
+  fd.append('file', blob, `upload.${fileExt}`);
   fd.append('upload_preset', preset);
   const url = `https://api.cloudinary.com/v1_1/${cloud}/image/upload`;
   console.log('[Cloudinary] uploading to:', url);
@@ -121,15 +128,26 @@ export default function AdminAddItems() {
   const [editVariantLabel, setEditVariantLabel] = useState("");
   const [editVariantPrice, setEditVariantPrice] = useState("");
 
+  // Homepage Settings state
+  const [homepageSettings, setHomepageSettings] = useState<HomepageSettings>(defaultHomepageSettings);
+  const [savingHomepageSettings, setSavingHomepageSettings] = useState(false);
+  const [homepageLogoPreview, setHomepageLogoPreview] = useState<string | null>(null);
+  const [homepageLogoFile, setHomepageLogoFile] = useState<File | null>(null);
+  const [homepageHeroPreview, setHomepageHeroPreview] = useState<string | null>(null);
+  const [homepageHeroFile, setHomepageHeroFile] = useState<File | null>(null);
+  const [crowdFavoriteFiles, setCrowdFavoriteFiles] = useState<(File | null)[]>([null, null, null, null]);
+  const [crowdFavoritePreviews, setCrowdFavoritePreviews] = useState<(string | null)[]>([null, null, null, null]);
+
   // Load everything on mount
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [menuRes, radSnap, catSnap, themeSnap] = await Promise.all([
+        const [menuRes, radSnap, catSnap, themeSnap, homeSnap] = await Promise.all([
           fetch(`${API_URL()}/api/menu`),
           get(ref(db, 'settings/deliveryRadiusKm')),
           get(ref(db, 'settings/categories')),
           get(ref(db, 'settings/activeTheme')),
+          get(ref(db, 'settings/homepage')),
         ]);
 
         if (menuRes.ok) {
@@ -142,6 +160,16 @@ export default function AdminAddItems() {
           setCategories(Array.isArray(saved) ? saved : DEFAULT_CATEGORIES);
         }
         if (themeSnap.exists()) setActiveTheme(themeSnap.val());
+        if (homeSnap.exists()) {
+          const homeData = homeSnap.val();
+          setHomepageSettings({
+            logoImage: homeData.logoImage || defaultHomepageSettings.logoImage,
+            heroImage: homeData.heroImage || defaultHomepageSettings.heroImage,
+            crowdFavorites: homeData.crowdFavorites || defaultHomepageSettings.crowdFavorites,
+            aboutHeading: homeData.aboutHeading !== undefined ? homeData.aboutHeading : defaultHomepageSettings.aboutHeading,
+            aboutSubheading: homeData.aboutSubheading !== undefined ? homeData.aboutSubheading : defaultHomepageSettings.aboutSubheading,
+          });
+        }
       } catch (err) {
         console.error("Failed to load admin data:", err);
       } finally {
@@ -180,6 +208,42 @@ export default function AdminAddItems() {
       toast.error("Failed to save settings.");
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  // ─── Save homepage settings ─────────────────────────────────────
+  const saveHomepageSettings = async () => {
+    setSavingHomepageSettings(true);
+    const newSettings = structuredClone(homepageSettings);
+    try {
+      if (homepageLogoFile) {
+        newSettings.logoImage = await uploadToCloudinary(homepageLogoFile);
+      }
+      if (homepageHeroFile) {
+        newSettings.heroImage = await uploadToCloudinary(homepageHeroFile);
+      }
+      for (let i = 0; i < crowdFavoriteFiles.length; i++) {
+        const file = crowdFavoriteFiles[i];
+        if (file) {
+          newSettings.crowdFavorites[i].image = await uploadToCloudinary(file);
+        }
+      }
+
+      await set(ref(db, 'settings/homepage'), newSettings);
+      setHomepageSettings(newSettings);
+
+      setHomepageLogoFile(null);
+      setHomepageLogoPreview(null);
+      setHomepageHeroFile(null);
+      setHomepageHeroPreview(null);
+      setCrowdFavoriteFiles([null, null, null, null]);
+      setCrowdFavoritePreviews([null, null, null, null]);
+
+      toast.success("Homepage settings saved!");
+    } catch {
+      toast.error("Failed to save homepage settings.");
+    } finally {
+      setSavingHomepageSettings(false);
     }
   };
 
@@ -539,6 +603,133 @@ export default function AdminAddItems() {
               <input type="number" value={deliveryRadius} onChange={e => setDeliveryRadius(Number(e.target.value))} className="w-32 px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]" />
               <button onClick={saveSettings} disabled={savingSettings} className="bg-[#1c1c1a] text-white px-6 py-3 rounded-[12px] font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors">
                 {savingSettings ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ── HOMEPAGE SETTINGS ── */}
+        <section>
+          <h2 className="text-[28px] font-black text-[var(--text-primary)] mb-5">Homepage Settings</h2>
+          <div className="bg-[var(--bg-card)] rounded-[22px] p-6 shadow-sm border border-[var(--bg-card-border)] flex flex-col gap-6">
+            
+            {/* Top Bar Logo */}
+            <div>
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Top Bar Logo</label>
+              <div className="flex gap-4 items-center">
+                <div className="w-24 h-24 bg-[var(--bg-primary)] rounded-[12px] border border-[var(--bg-card-border)] overflow-hidden flex items-center justify-center p-2">
+                   <img src={homepageLogoPreview || homepageSettings.logoImage} className="max-w-full max-h-full object-contain" alt="Logo preview" />
+                </div>
+                <label className="bg-[#1c1c1a] text-white px-5 py-2.5 rounded-[12px] font-bold text-[14px] hover:bg-gray-800 cursor-pointer transition-colors shadow-sm">
+                  Change Logo
+                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                    if (e.target.files?.[0]) {
+                      setHomepageLogoFile(e.target.files[0]);
+                      setHomepageLogoPreview(URL.createObjectURL(e.target.files[0]));
+                    }
+                  }} />
+                </label>
+              </div>
+            </div>
+
+            {/* Hero Image */}
+            <div>
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Hero Background Image</label>
+              <div className="flex gap-4 items-start flex-col">
+                <div className="w-full h-40 bg-[var(--bg-primary)] rounded-[16px] border border-[var(--bg-card-border)] overflow-hidden relative shadow-inner">
+                   <img src={homepageHeroPreview || homepageSettings.heroImage} className="w-full h-full object-cover" alt="Hero preview" />
+                </div>
+                <label className="bg-[#1c1c1a] text-white px-5 py-2.5 rounded-[12px] font-bold text-[14px] hover:bg-gray-800 cursor-pointer transition-colors shadow-sm">
+                  Change Hero Image
+                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                    if (e.target.files?.[0]) {
+                      setHomepageHeroFile(e.target.files[0]);
+                      setHomepageHeroPreview(URL.createObjectURL(e.target.files[0]));
+                    }
+                  }} />
+                </label>
+              </div>
+            </div>
+
+            {/* Crowd Favorites */}
+            <div>
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Crowd Favorite Cards</label>
+              <p className="text-[13px] text-gray-500 mb-4">Edit the 4 cards displayed below the hero section. We recommend using square or 4:5 aspect ratio images for these cards.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {homepageSettings.crowdFavorites.map((card, idx) => (
+                  <div key={card.id} className="bg-[var(--bg-primary)] border border-[var(--bg-card-border)] rounded-[16px] p-5 flex flex-col gap-4 shadow-sm">
+                    <div className="w-full aspect-[4/5] max-h-[220px] bg-gray-100 rounded-[12px] overflow-hidden relative shadow-inner">
+                      <img src={crowdFavoritePreviews[idx] || card.image} className="w-full h-full object-cover" alt={card.title} />
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
+                      <label className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm shadow-md text-black px-3 py-1.5 rounded-[8px] text-[12px] font-bold cursor-pointer hover:bg-white transition-all hover:scale-105 active:scale-95">
+                        Change Image
+                        <input type="file" accept="image/*" className="hidden" onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const newFiles = [...crowdFavoriteFiles];
+                            newFiles[idx] = file;
+                            setCrowdFavoriteFiles(newFiles);
+                            
+                            const newPreviews = [...crowdFavoritePreviews];
+                            newPreviews[idx] = URL.createObjectURL(file);
+                            setCrowdFavoritePreviews(newPreviews);
+                          }
+                        }} />
+                      </label>
+                    </div>
+                    <div>
+                         <label className="text-[11px] font-bold text-gray-500 tracking-wider uppercase mb-1 block">Title</label>
+                         <input type="text" className="w-full px-4 py-3 bg-[var(--bg-card)] border border-[var(--bg-input-border)] rounded-[12px] text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors" value={card.title} onChange={e => {
+                            const newSettings = structuredClone(homepageSettings);
+                            newSettings.crowdFavorites[idx].title = e.target.value;
+                            setHomepageSettings(newSettings);
+                         }} />
+                    </div>
+                    <div>
+                         <label className="text-[11px] font-bold text-gray-500 tracking-wider uppercase mb-1 block">Subtitle</label>
+                         <input type="text" className="w-full px-4 py-3 bg-[var(--bg-card)] border border-[var(--bg-input-border)] rounded-[12px] text-[14px] text-gray-600 focus:outline-none focus:border-[var(--accent)] transition-colors" value={card.subtitle} onChange={e => {
+                            const newSettings = structuredClone(homepageSettings);
+                            newSettings.crowdFavorites[idx].subtitle = e.target.value;
+                            setHomepageSettings(newSettings);
+                         }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* About Info */}
+            <div>
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">About Section</label>
+              <p className="text-[13px] text-gray-500 mb-4">Edit the about content that appears on the homepage.</p>
+              <div className="flex flex-col gap-4">
+                <div>
+                     <label className="text-[11px] font-bold text-gray-500 tracking-wider uppercase mb-1 block">Heading</label>
+                     <input type="text" className="w-full px-4 py-3 bg-[var(--bg-card)] border border-[var(--bg-input-border)] rounded-[12px] text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors" value={homepageSettings.aboutHeading} onChange={e => {
+                        const newSettings = structuredClone(homepageSettings);
+                        newSettings.aboutHeading = e.target.value;
+                        setHomepageSettings(newSettings);
+                     }} />
+                </div>
+                <div>
+                     <label className="text-[11px] font-bold text-gray-500 tracking-wider uppercase mb-1 block">Subheading</label>
+                     <textarea rows={3} className="w-full px-4 py-3 bg-[var(--bg-card)] border border-[var(--bg-input-border)] rounded-[12px] text-[14px] text-gray-600 focus:outline-none focus:border-[var(--accent)] transition-colors" value={homepageSettings.aboutSubheading} onChange={e => {
+                        const newSettings = structuredClone(homepageSettings);
+                        newSettings.aboutSubheading = e.target.value;
+                        setHomepageSettings(newSettings);
+                     }} />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button 
+                onClick={saveHomepageSettings} 
+                disabled={savingHomepageSettings} 
+                className="bg-[var(--accent)] text-white px-6 py-4 rounded-[14px] font-black tracking-wide text-[16px] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-all w-full shadow-md active:scale-[0.98]"
+              >
+                {savingHomepageSettings ? "SAVING SETTINGS..." : "SAVE HOMEPAGE SETTINGS"}
               </button>
             </div>
           </div>

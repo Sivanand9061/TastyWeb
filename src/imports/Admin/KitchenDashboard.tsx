@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { db } from '../../firebase';
 import { ref, onValue, update } from 'firebase/database';
 import { useAuth } from '../../app/AuthContext';
-import { ArrowLeft, Bell, BellOff } from 'lucide-react';
+import { ArrowLeft, Bell, BellOff, Settings, X, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { auth } from '../../firebase';
@@ -26,8 +26,7 @@ interface Order {
   createdAt: string;
 }
 
-const b64Ping = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"; // simple dummy header, won't sound like much without full pcm, so let's use a real public url or beep.
-const NOTIFICATION_SOUND = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg";
+// Removed external audio assets. Using Web Audio API synthesizer instead.
 
 export default function KitchenDashboard({ onBackHome }: { onBackHome: () => void }) {
   const { isAdmin } = useAuth();
@@ -39,7 +38,71 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
   const [resetConfirmText, setResetConfirmText] = useState('');
   const [resetting, setResetting] = useState(false);
   const previousOrdersLengthRef = useRef(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const activePlaybackRef = useRef<HTMLAudioElement | null>(null);
+  const [customAudioBase64, setCustomAudioBase64] = useState<string | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const audioSettingRef = ref(db, 'settings/notificationSoundBase64');
+    const unsub = onValue(audioSettingRef, (snap) => {
+      if (snap.exists()) setCustomAudioBase64(snap.val());
+      else setCustomAudioBase64(null);
+    });
+    return () => unsub();
+  }, [isAdmin]);
+
+  const stopAudio = () => {
+    if (activePlaybackRef.current) {
+      activePlaybackRef.current.pause();
+      activePlaybackRef.current.currentTime = 0;
+      activePlaybackRef.current = null;
+    }
+  };
+
+  const playBeep = () => {
+    stopAudio(); // Stop any currently ringing alarm before starting a new one
+    if (customAudioBase64) {
+      try {
+        const audio = new Audio(customAudioBase64);
+        activePlaybackRef.current = audio;
+        audio.play().catch(e => console.error("Custom Audio playback error:", e));
+        return;
+      } catch (err) {
+        console.error("Custom audio load failed, falling back to synth:", err);
+      }
+    }
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // First beep
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+      gain1.gain.setValueAtTime(0.8, audioCtx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+      osc1.start(audioCtx.currentTime);
+      osc1.stop(audioCtx.currentTime + 0.15);
+
+      // Second beep
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1108.73, audioCtx.currentTime + 0.2); // C#6 note
+      gain2.gain.setValueAtTime(0.8, audioCtx.currentTime + 0.2);
+      gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+      osc2.start(audioCtx.currentTime + 0.2);
+      osc2.stop(audioCtx.currentTime + 0.4);
+    } catch (e) {
+      console.error("Audio API error:", e);
+    }
+  };
 
   useEffect(() => {
     if (!isAdmin) {
@@ -59,8 +122,8 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
         const pendingOrders = ordersArray.filter(o => o.status === 'Pending');
         
         // Play sound if new pending order arrived
-        if (soundEnabled && audioRef.current && pendingOrders.length > previousOrdersLengthRef.current) {
-          audioRef.current.play().catch(e => console.error("Audio block:", e));
+        if (soundEnabled && pendingOrders.length > previousOrdersLengthRef.current) {
+          playBeep();
         }
         
         previousOrdersLengthRef.current = pendingOrders.length;
@@ -77,9 +140,10 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
     });
 
     return () => unsubscribe();
-  }, [isAdmin, soundEnabled]);
+  }, [isAdmin, soundEnabled, customAudioBase64]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    stopAudio(); // Shut down the alarm when they accept an order
     try {
       await update(ref(db, `orders/${orderId}`), {
         status: newStatus,
@@ -93,9 +157,7 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
 
   const enableSound = () => {
     setSoundEnabled(true);
-    if (audioRef.current) {
-      audioRef.current.play().catch(() => {});
-    }
+    playBeep(); // Test beep so they know it works
   };
 
   const resetOrders = async () => {
@@ -133,11 +195,8 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
   const pendingOrders = orders.filter(o => o.status === 'Pending');
   const preparingOrders = orders.filter(o => o.status === 'Preparing');
   const onWayOrders = orders.filter(o => o.status === 'On Way');
-
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col font-sans">
-      <audio ref={audioRef} src={NOTIFICATION_SOUND} preload="auto" />
-      
       {/* Top Navigation */}
       <div className="bg-gray-800 border-b border-gray-700 px-6 py-4 flex items-center justify-between shadow-xl">
         <div className="flex items-center gap-4">
@@ -165,6 +224,13 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
               Alerts Active
             </button>
           )}
+          {/* Settings Button */}
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="p-2 bg-gray-700 text-gray-300 hover:text-white rounded-xl transition-colors"
+          >
+            <Settings size={20} />
+          </button>
           <button
             onClick={() => { setShowResetModal(true); setResetConfirmText(''); }}
             className="flex items-center gap-2 bg-red-600/20 border border-red-600 text-red-400 px-4 py-2 rounded-xl font-bold hover:bg-red-600/30 transition-colors text-sm"
@@ -176,6 +242,102 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
           </div>
         </div>
       </div>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {showSettingsModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-gray-800 border border-gray-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative"
+            >
+              <button onClick={() => setShowSettingsModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <X size={24} />
+              </button>
+              <h2 className="text-xl font-bold mb-6 text-white flex items-center gap-2">
+                <Settings size={24} className="text-blue-400" />
+                Alert Settings
+              </h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Custom Notification Sound
+                  </label>
+                  <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+                    Upload a short .mp3 or .wav file (max 500KB) to replace the default synth beep.
+                  </p>
+                  
+                  <div className="relative border-2 border-dashed border-gray-600 rounded-xl p-8 hover:border-blue-500 hover:bg-gray-700/30 transition-all text-center cursor-pointer">
+                    <input 
+                      type="file" 
+                      accept="audio/mp3, audio/wav, audio/ogg, audio/mpeg" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 500 * 1024) {
+                          toast.error("File is too large! Please keep it under 500KB.");
+                          return;
+                        }
+                        const reader = new FileReader();
+                        setUploadingAudio(true);
+                        reader.onloadend = async () => {
+                          const base64String = reader.result as string;
+                          try {
+                            await update(ref(db, 'settings'), { notificationSoundBase64: base64String });
+                            toast.success("Custom audio saved successfully!");
+                          } catch (err) {
+                            console.error("Save error:", err);
+                            toast.error("Failed to save audio.");
+                          } finally {
+                            setUploadingAudio(false);
+                            // Auto-play the newly uploaded sound as a preview!
+                            try {
+                                const tempAudio = new Audio(base64String);
+                                tempAudio.play().catch(() => {});
+                            } catch (e) {}
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      disabled={uploadingAudio}
+                    />
+                    <Upload size={32} className={`mx-auto mb-3 ${uploadingAudio ? 'text-gray-500 animate-bounce' : 'text-blue-400'}`} />
+                    <span className="text-sm font-semibold text-gray-300">
+                      {uploadingAudio ? 'Uploading & Processing...' : (customAudioBase64 ? 'Replace current custom sound' : 'Click to select audio file')}
+                    </span>
+                  </div>
+                </div>
+
+                {customAudioBase64 && (
+                  <div className="flex justify-between items-center bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                     <span className="text-sm text-green-400 font-medium flex items-center gap-2">
+                       <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                       Custom Sound Active
+                     </span>
+                     <button 
+                       onClick={async () => {
+                          try {
+                            await update(ref(db, 'settings'), { notificationSoundBase64: null });
+                            toast.success("Reverted back to default synthetic beep.");
+                          } catch (err) {
+                            toast.error("Failed to revert sound.");
+                          }
+                       }}
+                       className="text-xs bg-red-500/20 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-500/30 transition-colors font-bold"
+                     >
+                       Remove
+                     </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Tab Navigation */}
       <div className="xl:hidden bg-gray-800 border-b border-gray-700 flex overflow-x-auto">
