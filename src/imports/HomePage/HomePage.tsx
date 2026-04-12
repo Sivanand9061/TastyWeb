@@ -72,11 +72,12 @@ export default function HomePage({
             />
           </div>
 
-          {/* Menu button — below the hero card, inside the sticky zone */}
-          <div className="absolute bottom-3 left-7" style={{ zIndex: 2 }}>
+          {/* Menu button — placed cleanly above the white sheet overlap */}
+          <div className="absolute bottom-[56px] left-[32px]" style={{ zIndex: 2 }}>
             <button
+              onClick={onExploreClick}
               className="flex items-center gap-2 bg-white/90 backdrop-blur-sm
-                         text-gray-800 px-4 py-2 rounded-full shadow-md
+                         text-gray-800 px-5 py-2.5 rounded-full shadow-lg
                          text-[11px] font-black tracking-widest uppercase
                          hover:bg-white active:scale-95 transition-all"
             >
