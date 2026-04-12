@@ -656,7 +656,9 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
 
   const handleOrderSubmit = async (formData: OrderFormData) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const isLocalhost = window.location.hostname === 'localhost';
+      const defaultApi = isLocalhost ? 'http://localhost:5000' : `http://${window.location.hostname}:5000`;
+      const apiUrl = import.meta.env.VITE_API_URL || defaultApi;
       
       const orderData = {
         customerName: formData.name,

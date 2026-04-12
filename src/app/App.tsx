@@ -6,7 +6,7 @@ import AdminAddItems from '../imports/Admin/AdminAddItems';
 import ProfileDashboard from '../imports/Profile/ProfileDashboard';
 import KitchenDashboard from '../imports/Admin/KitchenDashboard';
 
-import { Utensils, ReceiptText, ShoppingBag, User as UserIcon } from 'lucide-react';
+import { Utensils, ReceiptText, ShoppingBag, User as UserIcon, Home } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import LoginSignupModal from '../imports/Auth/LoginSignupModal';
 import { useHomepageSettings } from '../imports/HomePage/useHomepageSettings';
@@ -164,8 +164,16 @@ export default function App() {
       </main>
 
       {/* Global Sticky Bottom Navigation Tab Bar */}
-      {isShellPage && (
+      {isShellPage && currentPage !== 'cart' && (
         <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-gray-100 flex items-center justify-around py-2 pt-3 pb-6 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-[20px]">
+          <button 
+            onClick={handleBackToHome}
+            className={`flex flex-col items-center gap-1 w-1/4 ${currentPage === 'home' ? 'text-[#f51c27]' : 'text-gray-400'}`}
+          >
+            <Home size={22} strokeWidth={currentPage === 'home' ? 2.5 : 2} />
+            <span className="text-[9px] font-black tracking-widest uppercase">Home</span>
+          </button>
+
           <button 
             onClick={handleExploreMenu}
             className={`flex flex-col items-center gap-1 w-1/4 ${currentPage === 'menu' ? 'text-[#f51c27]' : 'text-gray-400'}`}
@@ -193,14 +201,6 @@ export default function App() {
               </div>
             )}
             <span className="text-[9px] font-black tracking-widest uppercase">Cart</span>
-          </button>
-          
-          <button 
-            onClick={handleGoToProfile}
-            className={`flex flex-col items-center gap-1 w-1/4 ${currentPage === 'profile' ? 'text-[#f51c27]' : 'text-gray-400'}`}
-          >
-            <UserIcon size={22} strokeWidth={currentPage === 'profile' ? 2.5 : 2} />
-            <span className="text-[9px] font-black tracking-widest uppercase">Profile</span>
           </button>
         </div>
       )}

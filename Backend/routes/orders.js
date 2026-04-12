@@ -47,6 +47,20 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Server-Side Stock Validation
+    const menuSnap = await req.db.ref('menu').once('value');
+    const menuData = menuSnap.val() || {};
+    const stockMap = {};
+    Object.values(menuData).forEach(menuItem => {
+      stockMap[menuItem.name] = menuItem.available !== false;
+    });
+
+    for (const item of items) {
+      if (stockMap[item.name] === false) {
+        return res.status(400).json({ error: `Sorry, ${item.name} is currently out of stock.` });
+      }
+    }
+
     // Distance validation
     if (lat && lng) {
       const snap = await req.db.ref('settings/deliveryRadiusKm').once('value');
