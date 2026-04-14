@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import imgLogoPng from "../Categories/fe9439b0b5b8f4134a87490c14dd926f577a90d9.png";
 import { useAuth } from "../../app/AuthContext";
 import { User, LogIn, ChevronLeft } from "lucide-react";
 import LoginSignupModal from "../Auth/LoginSignupModal";
@@ -725,6 +726,7 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
 
   return (
     <div className="bg-white relative overflow-hidden flex flex-col items-center pt-2">
+      <TopBar onBackHome={onBackHome} cartItemsCount={items.length} onNavigateToProfile={onNavigateToProfile} />
       <div className="w-full max-w-[1280px] min-h-[calc(100vh-100px)] flex flex-col relative z-10 px-2 lg:px-4">
       
       {!currentUser && (
