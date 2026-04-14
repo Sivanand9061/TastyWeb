@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import svgPaths from "../Categories/svg-k7l7daq8c2";
-import imgLogoPng from "../Categories/fe9439b0b5b8f4134a87490c14dd926f577a90d9.png";
-import { useAuth } from "../../app/AuthContext";
-import { User, LogIn, ChevronLeft } from "lucide-react";
+import { User, LogIn, ArrowLeft } from "lucide-react";
 import LoginSignupModal from "../Auth/LoginSignupModal";
 import { ref, get, update } from "firebase/database";
 import { db } from "../../firebase";
@@ -33,62 +30,6 @@ interface OrderFormData {
   lng?: number;
   phone: string;
   notes: string;
-}
-
-function TopBar({ onBackHome, cartItemsCount = 0, onNavigateToAdmin, onNavigateToProfile, onLoginClick }: { onBackHome?: () => void; cartItemsCount?: number; onNavigateToAdmin?: () => void; onNavigateToProfile?: () => void; onLoginClick?: () => void }) {
-  const { currentUser, isAdmin } = useAuth();
-  
-  return (
-    <div className="sticky top-0 z-[100] bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] mx-2 mt-5 mb-4 h-[70px]">
-      <div className="flex items-center justify-between px-4 py-3 max-w-[1280px] mx-auto h-full">
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={onBackHome}
-            className="p-2 -ml-2 text-gray-800 hover:bg-black/5 rounded-full transition-colors"
-            title="Go Back"
-          >
-            <ChevronLeft size={24} strokeWidth={2.5} />
-          </button>
-          <button onClick={onBackHome} className="w-[44px] h-[42px] relative hover:opacity-80 transition-opacity">
-            <img alt="Tasty Hot Logo" className="w-full h-full object-cover" src={imgLogoPng} />
-          </button>
-        </div>
-        
-        <div className="flex items-center gap-3 relative mr-[-1.5rem]">
-          {isAdmin && (
-            <button 
-              onClick={onNavigateToAdmin}
-              className="text-[10px] font-bold bg-[#f51c27] text-white px-2 py-1 rounded hover:bg-[#d90429] transition-colors"
-              title="Admin Dashboard"
-            >
-              ADMIN
-            </button>
-          )}
-
-          {currentUser ? (
-            <button onClick={onNavigateToProfile} className="p-2 -mr-1">
-              <User size={20} className="text-gray-800" />
-            </button>
-          ) : (
-            <button onClick={onLoginClick} className="p-2 -mr-1">
-              <LogIn size={20} className="text-gray-800" />
-            </button>
-          )}
-
-          <div className="relative p-2 ml-1">
-            <svg className="w-5 h-5 -mt-0.5" fill="none" viewBox="0 0 19.9815 20">
-              <path d={svgPaths.pb5c2400} fill="#1C1C1A" />
-            </svg>
-            {cartItemsCount > 0 && (
-              <div className="absolute top-0 right-0 bg-[#d90429] rounded-full w-4 h-4 flex items-center justify-center border-2 border-white">
-                <span className="text-white text-[9px] font-bold leading-none">{cartItemsCount}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function CartItemCard({ item, onRemove, onQuantityChange }: { item: CartItem & { id: string }; onRemove: () => void; onQuantityChange: (qty: number) => void }) {
@@ -726,15 +667,21 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
   };
 
   return (
-    <div className="bg-white relative overflow-hidden flex flex-col items-center pt-2">
-      <TopBar 
-        onBackHome={onBackHome} 
-        cartItemsCount={items.length} 
-        onNavigateToProfile={onNavigateToProfile}
-        onLoginClick={() => setIsLoginModalOpen(true)}
-        onNavigateToAdmin={() => { /* Navigation handled in App.tsx usually, but we can set a state if needed */ }}
-      />
-      <div className="w-full max-w-[1280px] min-h-[calc(100vh-100px)] flex flex-col relative z-10 px-2 lg:px-4">
+    <div className="min-h-screen bg-[#fbf4e8]">
+      {/* Simple Sticky Header matching Profile Page */}
+      <div className="sticky top-0 bg-white/80 backdrop-blur-md z-50 border-b border-gray-200">
+        <div className="max-w-2xl mx-auto px-4 h-[70px] flex items-center">
+          <button 
+            onClick={onBackHome} 
+            className="p-2 -ml-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <h1 className="ml-4 text-lg font-bold text-gray-900">Your Cart</h1>
+        </div>
+      </div>
+
+      <div className="w-full max-w-[1280px] flex flex-col relative z-10 px-2 lg:px-4">
       
       {!currentUser && (
         <div className="mx-4 mt-2 mb-4 bg-white p-4 rounded-2xl flex items-center justify-between border border-[#e0e0e0] shadow-sm max-w-2xl sm:mx-auto w-[calc(100%-2rem)]">

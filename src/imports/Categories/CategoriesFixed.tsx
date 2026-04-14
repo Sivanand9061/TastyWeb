@@ -4,41 +4,11 @@ import imgWhatsApp from "./ed00f9add7cd5cb0ff88532464058a5e59bc4497.png";
 import imgImage1 from "./99fddedb4828ce247ec845e7f4b3ade3c1715928.png";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Plus, ChevronLeft } from "lucide-react";
+import { Plus, ArrowLeft } from "lucide-react";
 import { ref, get } from "firebase/database";
 import { db } from "../../firebase";
 
 const DEFAULT_CATEGORIES = ["Pizza", "Burgers", "Pasta", "Desserts", "Drinks", "Salads"];
-function TopBar({ onBackHome, cartItemsCount = 0, onNavigateToCart }: { onBackHome?: () => void; cartItemsCount?: number; onNavigateToCart?: () => void }) {
-  return (
-    <div className="sticky top-0 z-50 bg-[var(--topbar-bg)] backdrop-blur-sm shadow-[var(--topbar-shadow)] rounded-[35px] mx-4 mt-5 mb-4 h-[70px]">
-      <div className="flex items-center justify-between px-4 py-3 max-w-[1280px] mx-auto h-full">
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={onBackHome}
-            className="p-2 -ml-2 text-gray-800 hover:bg-black/5 rounded-full transition-colors"
-            title="Go Back"
-          >
-            <ChevronLeft size={24} strokeWidth={2.5} />
-          </button>
-          <button onClick={onBackHome} className="w-[42px] h-[42px] relative hover:opacity-80 transition-opacity">
-            <img alt="Tasty Hot Logo" className="w-full h-full object-cover" src={imgLogoPng} />
-          </button>
-        </div>
-        <button onClick={onNavigateToCart} className="relative hover:opacity-80 transition-opacity">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 19.9815 20">
-            <path d={svgPaths.pb5c2400} fill="var(--text-primary)" />
-          </svg>
-          {cartItemsCount > 0 && (
-            <div className="absolute -top-1 -right-1 bg-[var(--accent-hover)] rounded-full w-4 h-4 flex items-center justify-center">
-              <span className="text-white text-[10px] font-bold leading-none">{cartItemsCount}</span>
-            </div>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function HeroSection() {
   return (
@@ -684,6 +654,16 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
           className="sticky z-[45] bg-white pt-2 pb-3 shadow-[0_4px_10px_rgba(0,0,0,0.03)] border-b border-gray-100 mb-6"
           style={{ top: '60px', position: 'sticky', width: '100%' }}
         >
+          <div className="flex items-center px-4 mb-2">
+            <button 
+              onClick={onBackHome} 
+              className="p-2 -ml-2 text-gray-600 hover:text-gray-900 transition-colors"
+              title="Go Back"
+            >
+              <ArrowLeft size={24} />
+            </button>
+            <span className="ml-2 font-bold text-gray-400 text-sm uppercase tracking-widest">Menu</span>
+          </div>
           <SearchBar value={searchQuery} onChange={setSearchQuery} />
           <CategoryTabs categories={categories} onCategoryClick={handleCategoryClick} />
         </div>

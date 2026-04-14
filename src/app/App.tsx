@@ -103,19 +103,8 @@ export default function App() {
       {/* Global White Header for App Shell */}
       {isShellPage && (
         <div className="sticky top-0 z-50 bg-[#eaeaec] h-[60px] flex items-center justify-between px-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)]">
-          <div className="flex items-center">
-            {currentPage !== 'home' && (
-              <button 
-                onClick={handleBackToHome}
-                className="p-2 -ml-2 text-gray-800 hover:bg-black/5 rounded-full transition-colors mr-1"
-                title="Go Back"
-              >
-                <ChevronLeft size={24} strokeWidth={2.5} />
-              </button>
-            )}
-            <div className="h-[60px] cursor-pointer flex items-center pl-2 relative" onClick={handleBackToHome}>
-              <img alt="Tasty Hot Logo" className="h-[60px] w-auto max-w-[200px] object-contain object-left transform scale-[2] origin-left translate-x-2" src={settings.logoImage} />
-            </div>
+          <div className="h-[60px] cursor-pointer flex items-center pl-2 relative" onClick={handleBackToHome}>
+            <img alt="Tasty Hot Logo" className="h-[60px] w-auto max-w-[200px] object-contain object-left transform scale-[2] origin-left translate-x-2" src={settings.logoImage} />
           </div>
           
           <div className="flex-1" />
