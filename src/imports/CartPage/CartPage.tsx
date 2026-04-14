@@ -727,7 +727,13 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
 
   return (
     <div className="bg-white relative overflow-hidden flex flex-col items-center pt-2">
-      <TopBar onBackHome={onBackHome} cartItemsCount={items.length} onNavigateToProfile={onNavigateToProfile} />
+      <TopBar 
+        onBackHome={onBackHome} 
+        cartItemsCount={items.length} 
+        onNavigateToProfile={onNavigateToProfile}
+        onLoginClick={() => setIsLoginModalOpen(true)}
+        onNavigateToAdmin={() => { /* Navigation handled in App.tsx usually, but we can set a state if needed */ }}
+      />
       <div className="w-full max-w-[1280px] min-h-[calc(100vh-100px)] flex flex-col relative z-10 px-2 lg:px-4">
       
       {!currentUser && (
