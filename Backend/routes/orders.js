@@ -37,14 +37,26 @@ function pushToSheets(data) {
   }).catch(err => console.error('[Sheets] Webhook failed:', err.message));
 }
 
+const { orderLimiter } = require('../middleware/rateLimiter');
 // Place new order
-router.post('/', async (req, res, next) => {
+router.post('/', orderLimiter, async (req, res, next) => {
   try {
-    const { customerName, address, lat, lng, phone, email, items, totalAmount, notes, userId } = req.body;
+    let { customerName, address, lat, lng, phone, email, items, totalAmount, notes, userId } = req.body;
     
     // Validation
     if (!customerName || !address || !phone || !items || !totalAmount) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Strict Input Length Validation & Basic Sanitization
+    customerName = String(customerName).substring(0, 100).replace(/[<>{}]/g, ''); 
+    address = String(address).substring(0, 500).replace(/[<>{}]/g, '');
+    notes = String(notes || '').substring(0, 1000).replace(/[<>{}]/g, '');
+    phone = String(phone).substring(0, 20);
+    email = String(email || '').substring(0, 100);
+
+    if (items.length > 50) {
+       return res.status(400).json({ error: 'Too many items in cart' });
     }
 
     // Server-Side Stock Validation

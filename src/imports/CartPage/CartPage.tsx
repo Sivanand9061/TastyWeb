@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../../app/AuthContext";
-import { User, LogIn } from "lucide-react";
+import { User, LogIn, ChevronLeft } from "lucide-react";
 import LoginSignupModal from "../Auth/LoginSignupModal";
 import { ref, get, update } from "firebase/database";
 import { db } from "../../firebase";
@@ -38,10 +38,19 @@ function TopBar({ onBackHome, cartItemsCount = 0, onNavigateToAdmin, onNavigateT
   
   return (
     <div className="sticky top-0 z-[100] bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] mx-2 mt-5 mb-4 h-[70px]">
-      <div className="flex items-center justify-between px-6 py-3 max-w-[1280px] mx-auto h-full">
-        <button onClick={onBackHome} className="w-[49px] h-[46px] ml-[-0.3rem] relative hover:opacity-80 transition-opacity">
-          <img alt="Tasty Hot Logo" className="w-full h-full object-cover" src={imgLogoPng} />
-        </button>
+      <div className="flex items-center justify-between px-4 py-3 max-w-[1280px] mx-auto h-full">
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={onBackHome}
+            className="p-2 -ml-2 text-gray-800 hover:bg-black/5 rounded-full transition-colors"
+            title="Go Back"
+          >
+            <ChevronLeft size={24} strokeWidth={2.5} />
+          </button>
+          <button onClick={onBackHome} className="w-[44px] h-[42px] relative hover:opacity-80 transition-opacity">
+            <img alt="Tasty Hot Logo" className="w-full h-full object-cover" src={imgLogoPng} />
+          </button>
+        </div>
         
         <div className="flex items-center gap-3 relative mr-[-1.5rem]">
           {isAdmin && (

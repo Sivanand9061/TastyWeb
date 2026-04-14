@@ -99,4 +99,16 @@ export function applyTheme(themeId: string) {
   Object.entries(theme.colors).forEach(([key, value]) => {
     root.style.setProperty(key, value);
   });
+
+  // Update browser theme color meta tag
+  const topBarColor = theme.colors['--topbar-bg'];
+  // If it's rgba, we extract a solid equivalent or use the accent color as fallback
+  // For most mobile browsers, a solid hex works best. 
+  // We'll use the --bg-primary or a dedicated --theme-color if we had one.
+  // For now, let's use a solid version of the topbar bg or the bg-primary.
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeColorMeta) {
+    // If topbar is transparent, bg-primary is a better match for the browser UI
+    themeColorMeta.setAttribute('content', theme.colors['--bg-primary'] || '#ffffff');
+  }
 }

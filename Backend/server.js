@@ -19,6 +19,8 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
+const { globalLimiter } = require('./middleware/rateLimiter');
+app.use(globalLimiter);
 app.use(express.json());
 
 // Initialize Firebase Admin
