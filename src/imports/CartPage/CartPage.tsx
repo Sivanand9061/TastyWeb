@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import svgPaths from "../Categories/svg-k7l7daq8c2";
 import imgLogoPng from "../Categories/fe9439b0b5b8f4134a87490c14dd926f577a90d9.png";
 import { useAuth } from "../../app/AuthContext";
 import { User, LogIn, ChevronLeft } from "lucide-react";
