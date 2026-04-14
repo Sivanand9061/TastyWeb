@@ -7,7 +7,7 @@ import ProfileDashboard from '../imports/Profile/ProfileDashboard';
 import KitchenDashboard from '../imports/Admin/KitchenDashboard';
 import PwaInstallPrompt from '../components/PwaInstallPrompt';
 
-import { Utensils, ReceiptText, ShoppingBag, User as UserIcon, Home } from 'lucide-react';
+import { Utensils, ReceiptText, ShoppingBag, User as UserIcon, Home, ChevronLeft } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import LoginSignupModal from '../imports/Auth/LoginSignupModal';
 import { useHomepageSettings } from '../imports/HomePage/useHomepageSettings';
