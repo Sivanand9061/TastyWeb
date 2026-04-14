@@ -1,53 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Primary SEO -->
-    <title>Tasty Hot — Order Fresh Food Online | Al Rawda, Ajman</title>
-    <meta name="description" content="Order delicious shawarma, burgers, pizza, pasta and more from Tasty Hot restaurant in Al Rawda, Ajman. Fast delivery straight to your door. Order online now!" />
-    <meta name="keywords" content="Tasty Hot, Al Rawda Ajman, food delivery Ajman, shawarma Ajman, burger Ajman, order food online, restaurant Ajman UAE" />
-    <meta name="author" content="Tasty Hot Restaurant" />
-    <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://tasty-web.vercel.app" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Theme color (browser toolbar & mobile status bar) -->
-    <meta name="theme-color" content="#e0e0e0" />
+  <!-- Primary SEO -->
+  <title>Tasty Hot — Order Fresh Food Online | Al Rawda, Ajman</title>
+  <meta name="description"
+    content="Order delicious shawarma, burgers, pizza, pasta and more from Tasty Hot restaurant in Al Rawda, Ajman. Fast delivery straight to your door. Order online now!" />
+  <meta name="keywords"
+    content="Tasty Hot, Al Rawda Ajman, food delivery Ajman, shawarma Ajman, burger Ajman, order food online, restaurant Ajman UAE" />
+  <meta name="author" content="Tasty Hot Restaurant" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://tasty-web.vercel.app" />
 
-    <!-- Open Graph (WhatsApp, Facebook, Telegram previews) -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Tasty Hot" />
-    <meta property="og:title" content="Tasty Hot — Fresh Food Delivered in Ajman" />
-    <meta property="og:description" content="Shawarma, burgers, pizza & more. Order online from Tasty Hot, Al Rawda, Ajman. Fast delivery to your door!" />
-    <meta property="og:image" content="https://tasty-web.vercel.app/images/hero.jpeg" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:url" content="https://tasty-web.vercel.app" />
-    <meta property="og:locale" content="en_AE" />
+  <!-- Theme color (browser toolbar & mobile status bar) -->
+  <meta name="theme-color" content="#e0u0e0" />
 
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Tasty Hot — Fresh Food Delivered in Ajman" />
-    <meta name="twitter:description" content="Order shawarma, burgers, pizza & more from Tasty Hot, Al Rawda, Ajman." />
-    <meta name="twitter:image" content="https://tasty-web.vercel.app/images/hero.jpeg" />
+  <!-- Open Graph (WhatsApp, Facebook, Telegram previews) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Tasty Hot" />
+  <meta property="og:title" content="Tasty Hot — Fresh Food Delivered in Ajman" />
+  <meta property="og:description"
+    content="Shawarma, burgers, pizza & more. Order online from Tasty Hot, Al Rawda, Ajman. Fast delivery to your door!" />
+  <meta property="og:image" content="https://tasty-web.vercel.app/images/hero.jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:url" content="https://tasty-web.vercel.app" />
+  <meta property="og:locale" content="en_AE" />
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/images/hero.jpeg" />
-    <link rel="apple-touch-icon" href="/images/hero.jpeg" />
-    <link rel="manifest" href="/manifest.json" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Tasty Hot — Fresh Food Delivered in Ajman" />
+  <meta name="twitter:description" content="Order shawarma, burgers, pizza & more from Tasty Hot, Al Rawda, Ajman." />
+  <meta name="twitter:image" content="https://tasty-web.vercel.app/images/hero.jpeg" />
 
-    <!-- Register short service worker for PWA -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
-        });
-      }
-    </script>
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/hero.jpeg" />
+  <link rel="apple-touch-icon" href="/images/hero.jpeg" />
+  <link rel="manifest" href="/manifest.json" />
 
-    <!-- Google Structured Data (Restaurant Business) -->
-    <script type="application/ld+json">
+  <!-- Register short service worker for PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js');
+      });
+    }
+  </script>
+
+  <!-- Google Structured Data (Restaurant Business) -->
+  <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Restaurant",
@@ -73,14 +77,17 @@
     }
     </script>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  </head>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+</head>
 
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

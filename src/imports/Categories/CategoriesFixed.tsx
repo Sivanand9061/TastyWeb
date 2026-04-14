@@ -5,10 +5,52 @@ import imgImage1 from "./99fddedb4828ce247ec845e7f4b3ade3c1715928.png";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Plus, ArrowLeft } from "lucide-react";
-import { ref, get } from "firebase/database";
+import { ref, get, onValue } from "firebase/database";
 import { db } from "../../firebase";
 
+
+interface MenuItem {
+  id?: string;
+  name: string;
+  nameAr?: string;
+  description: string;
+  price: string;
+  category: string;
+  available?: boolean;
+  schedule?: { start: string; end: string; active: boolean };
+  image?: string;
+  variants?: { label: string; price: string }[];
+}
+
 const DEFAULT_CATEGORIES = ["Pizza", "Burgers", "Pasta", "Desserts", "Drinks", "Salads"];
+
+const getDubaiTime = () => {
+  try {
+    const dubaiDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dubai" }));
+    return `${String(dubaiDate.getHours()).padStart(2, '0')}:${String(dubaiDate.getMinutes()).padStart(2, '0')}`;
+  } catch (e) {
+    // Fallback to local time if Dubai time zone fails
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+};
+
+const isAvailable = (schedule?: { start?: string; end?: string; active?: boolean }) => {
+  if (!schedule || !schedule.active) return true;
+  if (!schedule.start || !schedule.end) return true;
+
+  const current = getDubaiTime();
+  const { start, end } = schedule;
+
+  // Normalize formats to ensure HH:mm (e.g. "9:00" -> "09:00")
+  const norm = (s: string) => s.split(':').map(p => p.padStart(2, '0')).join(':');
+  const c = norm(current);
+  const s = norm(start);
+  const e = norm(end);
+
+  if (s <= e) return c >= s && c <= e;
+  return c >= s || c <= e; // Over midnight support
+};
 
 function HeroSection() {
   return (
@@ -70,10 +112,11 @@ function SearchBar({ value, onChange }: SearchBarProps) {
 
 interface CategoryTabsProps {
   categories: string[];
+  sortedCategories: string[];
   onCategoryClick: (index: number) => void;
 }
 
-function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
+function CategoryTabs({ categories, sortedCategories, onCategoryClick }: CategoryTabsProps) {
   const [activeCategory, setActiveCategory] = useState(0);
 
   useEffect(() => {
@@ -81,7 +124,7 @@ function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
       const scrollPosition = window.scrollY + 250;
       let currentActiveIndex = 0;
 
-      categories.forEach((_, index) => {
+      sortedCategories.forEach((_, index) => {
         const el = document.querySelector(`[data-cat="${index}"]`) as HTMLElement | null;
         if (el && el.offsetTop <= scrollPosition) {
           currentActiveIndex = index;
@@ -93,7 +136,6 @@ function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
         const container = document.getElementById('category-tabs-container');
         const btn = document.querySelector(`[data-cat-btn="${currentActiveIndex}"]`) as HTMLElement | null;
         if (btn && container) {
-          // Compute left offset natively relative to the container to prevent vertical scroll jacking
           const scrollLeft = btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2;
           container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
         }
@@ -102,12 +144,12 @@ function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [categories, activeCategory]);
+  }, [sortedCategories, activeCategory]);
 
   return (
     <div id="category-tabs-container" className="overflow-x-auto no-scrollbar scroll-smooth pl-4 pr-4 relative">
       <div className="flex gap-2 min-w-max pb-1">
-        {categories.map((category, index) => {
+        {sortedCategories.map((category, index) => {
           const isActive = activeCategory === index;
           return (
             <button
@@ -124,8 +166,8 @@ function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
                 }
               }}
               className={`px-5 py-2.5 rounded-[12px] text-[13px] font-bold transition-all relative ${isActive
-                  ? 'bg-[#f51c27] text-white shadow-sm'
-                  : 'bg-[#f6f6f6] text-gray-600 hover:bg-gray-200'
+                ? 'bg-[#f51c27] text-white shadow-sm'
+                : 'bg-[#f6f6f6] text-gray-600 hover:bg-gray-200'
                 }`}
             >
               {category === "Pizza" && index === 0 ? "All Menu" : category}
@@ -137,28 +179,128 @@ function CategoryTabs({ categories, onCategoryClick }: CategoryTabsProps) {
   );
 }
 
+interface MenuItemCardProps {
+  item: MenuItem;
+  onClick: (item: MenuItem) => void;
+  isAvailable: boolean;
+  onAddToCart?: (item: MenuItem & { quantity: number }) => void;
+}
+
+function MenuItemCard({ item, onClick, isAvailable, onAddToCart }: MenuItemCardProps) {
+  const hasVariants = item.variants && item.variants.length > 0;
+
+  const handleAddToCartClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onAddToCart) {
+      onAddToCart({ ...item, quantity: 1 });
+    }
+  };
+
+  return (
+    <div
+      className={`pb-6 mb-6 border-b border-gray-100 ${isAvailable && !hasVariants ? 'cursor-pointer' : ''} transition-colors ${!isAvailable ? 'opacity-70' : ''}`}
+      onClick={() => {
+        onClick(item);
+      }}
+    >
+      <div className="flex gap-4">
+        <div className={`w-[84px] h-[84px] rounded-[14px] flex-shrink-0 overflow-hidden bg-gray-100 shadow-sm border border-black/5 ${!isAvailable ? 'grayscale opacity-60' : ''}`}>
+          {item.image ? (
+            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-3xl opacity-50">🍽️</div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className={`text-[15.5px] font-bold leading-tight ${!isAvailable ? 'text-gray-400' : 'text-gray-900'}`}>{item.name}</h3>
+            {isAvailable ? (
+              <p className="text-[#f51c27] font-black text-[15px] shrink-0">
+                AED {!hasVariants ? item.price : Math.min(...item.variants!.map(v => parseFloat(v.price))).toFixed(0)}
+              </p>
+            ) : (
+              <span className="text-red-500 text-[9px] font-bold px-2 py-1 bg-red-50 rounded-full shrink-0 uppercase tracking-tighter">OUT OF STOCK</span>
+            )}
+          </div>
+
+          {item.schedule?.active && !isAvailable && (
+            <p className="text-[10px] font-bold text-red-400 uppercase tracking-tight">Available: {item.schedule.start} - {item.schedule.end}</p>
+          )}
+
+          <p className="text-[13px] text-gray-500 mt-1 line-clamp-2 leading-snug pr-2">{item.description}</p>
+
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Dynamic Tags */}
+              {item.name.toLowerCase().includes('signature') && (
+                <span className="bg-red-50 text-[#f51c27] text-[9px] font-bold px-2 py-0.5 rounded-[4px] tracking-widest uppercase">
+                  MOST POPULAR
+                </span>
+              )}
+              {item.name.toLowerCase().includes('spicy') || item.name.toLowerCase().includes('inferno') ? (
+                <span className="text-[10px]">🔥 🔥</span>
+              ) : null}
+              {item.category === "Sides" && (
+                <span className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">SIDE ITEM</span>
+              )}
+              {item.category === "Drinks" && (
+                <span className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">BEVERAGE</span>
+              )}
+            </div>
+
+            {isAvailable && !hasVariants && (
+              <button
+                onClick={handleAddToCartClick}
+                className="bg-[#f51c27] w-7 h-7 rounded-full flex items-center justify-center text-white shadow-md active:scale-95 transition-transform shrink-0"
+              >
+                <Plus size={16} strokeWidth={3} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Variant size selector row */}
+      {hasVariants && isAvailable && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="flex gap-2 flex-wrap mt-3 pl-[100px]"
+        >
+          {item.variants!.map(v => (
+            <button
+              key={v.label}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onAddToCart) {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  onAddToCart({ ...item, price: v.price, quantity: 1, variant: v.label } as any);
+                }
+              }}
+              className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 hover:bg-[#f51c27] hover:text-white hover:border-[#f51c27] transition-all duration-200 group"
+            >
+              <span className="text-[11px] font-bold text-gray-700 group-hover:text-white">{v.label}</span>
+              <span className="text-[10px] text-gray-500 group-hover:text-white/90">· ${v.price}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface MenuListProps {
   categories: string[];
-  categoryRefs: React.RefObject<HTMLDivElement>[];
+  sortedCategories: string[];
+  setCategoryRef: (index: number) => (el: HTMLDivElement | null) => void;
   onItemClick: (item: MenuItem) => void;
   searchQuery: string;
   menuData: Record<string, MenuItem[]>;
   onAddToCart?: (item: MenuItem & { quantity: number }) => void;
+  isItemAvailable: (item: MenuItem) => boolean;
 }
 
-interface MenuItem {
-  id: string;
-  name: string;
-  nameAr?: string;
-  description: string;
-  price: string;
-  category: string;
-  available?: boolean;
-  image?: string;
-  variants?: { label: string; price: string }[];
-}
-
-function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData, onAddToCart }: MenuListProps) {
+function MenuList({ categories, sortedCategories, setCategoryRef, onItemClick, searchQuery, menuData, onAddToCart, isItemAvailable }: MenuListProps) {
 
   const filteredMenuData = () => {
     if (!searchQuery.trim()) return menuData;
@@ -179,16 +321,8 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
     return filtered;
   };
 
-  const handleAddToCart = (e: React.MouseEvent, item: MenuItem) => {
-    e.stopPropagation();
-    if (onAddToCart) {
-      onAddToCart({ ...item, quantity: 1 });
-    }
-    console.log("Added to cart:", item.name);
-  };
-
   const filtered = filteredMenuData();
-  const visibleCategories = categories.filter(cat => cat in filtered);
+  const visibleCategories = sortedCategories.filter(cat => cat in filtered);
 
   return (
     <div className="px-4 pb-20 pt-2">
@@ -208,100 +342,19 @@ function MenuList({ categories, categoryRefs, onItemClick, searchQuery, menuData
       ) : null}
       {visibleCategories.map((category) => {
         const categoryIndex = categories.indexOf(category);
+        const sortedIndex = sortedCategories.indexOf(category);
         return (
-          <div key={category} ref={categoryRefs[categoryIndex]} data-cat={categoryIndex} className="scroll-mt-[140px]">
+          <div key={category} ref={setCategoryRef(categoryIndex)} data-cat={sortedIndex} className="scroll-mt-[140px]">
             <h2 className="text-[22px] font-heading font-black text-[#1c2938] uppercase tracking-wide mb-4 mt-8">{category}</h2>
-            {filtered[category as keyof typeof filtered].map((item, itemIndex) => {
-              const hasVariants = item.variants && item.variants.length > 0;
-              return (
-                <div
-                  key={itemIndex}
-                  className={`pb-6 mb-6 border-b border-gray-100 ${item.available !== false && !hasVariants ? 'cursor-pointer' : ''} transition-colors`}
-                  onClick={() => {
-                    if (item.available !== false) onItemClick(item);
-                  }}
-                >
-                  <div className="flex gap-4">
-                    <div className="w-[84px] h-[84px] rounded-[14px] flex-shrink-0 overflow-hidden bg-gray-100 shadow-sm border border-black/5">
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-3xl opacity-50">🍽️</div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-[15.5px] font-bold text-gray-900 leading-tight">{item.name}</h3>
-                        {item.available !== false ? (
-                          <p className="text-[#f51c27] font-black text-[15px] shrink-0">
-                            ${!hasVariants ? item.price : Math.min(...item.variants!.map(v => parseFloat(v.price))).toFixed(0)}
-                          </p>
-                        ) : (
-                          <span className="text-red-500 text-[10px] font-bold px-2 py-1 bg-red-50 rounded-full shrink-0">OUT OF STOCK</span>
-                        )}
-                      </div>
-
-                      <p className="text-[13px] text-gray-500 mt-1 line-clamp-2 leading-snug pr-2">{item.description}</p>
-
-                      <div className="flex items-center justify-between mt-3">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {/* Dynamic Tags */}
-                          {item.name.toLowerCase().includes('signature') && (
-                            <span className="bg-red-50 text-[#f51c27] text-[9px] font-bold px-2 py-0.5 rounded-[4px] tracking-widest uppercase">
-                              MOST POPULAR
-                            </span>
-                          )}
-                          {item.name.toLowerCase().includes('spicy') || item.name.toLowerCase().includes('inferno') ? (
-                            <span className="text-[10px]">🔥 🔥</span>
-                          ) : null}
-                          {item.category === "Sides" && (
-                            <span className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">SIDE ITEM</span>
-                          )}
-                          {item.category === "Drinks" && (
-                            <span className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">BEVERAGE</span>
-                          )}
-                        </div>
-
-                        {item.available !== false && !hasVariants && (
-                          <button
-                            onClick={(e) => handleAddToCart(e, item)}
-                            className="bg-[#f51c27] w-7 h-7 rounded-full flex items-center justify-center text-white shadow-md active:scale-95 transition-transform shrink-0"
-                          >
-                            <Plus size={16} strokeWidth={3} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Variant size selector row */}
-                  {hasVariants && item.available !== false && (
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex gap-2 flex-wrap mt-3 pl-[100px]"
-                    >
-                      {item.variants!.map(v => (
-                        <button
-                          key={v.label}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onAddToCart) {
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                              onAddToCart({ ...item, price: v.price, quantity: 1, variant: v.label } as any);
-                            }
-                          }}
-                          className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 hover:bg-[#f51c27] hover:text-white hover:border-[#f51c27] transition-all duration-200 group"
-                        >
-                          <span className="text-[11px] font-bold text-gray-700 group-hover:text-white">{v.label}</span>
-                          <span className="text-[10px] text-gray-500 group-hover:text-white/90">· ${v.price}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {(filtered[category] || []).map((item, itemIndex) => (
+              <MenuItemCard
+                key={item.id || itemIndex}
+                item={item}
+                onClick={onItemClick}
+                isAvailable={isItemAvailable(item)}
+                onAddToCart={onAddToCart}
+              />
+            ))}
           </div>
         );
       })}
@@ -314,9 +367,10 @@ interface ProductDetailProps {
   isOpen: boolean;
   onClose: () => void;
   onAddToCart?: (item: MenuItem & { quantity: number }) => void;
+  isAvailable: boolean;
 }
 
-function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProps) {
+function ProductDetail({ item, isOpen, onClose, onAddToCart, isAvailable }: ProductDetailProps) {
   const [selectedVariant, setSelectedVariant] = useState<{ label: string; price: string } | null>(null);
 
   // Reset variant selection each time a new item opens
@@ -402,8 +456,8 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProp
                           key={v.label}
                           onClick={() => setSelectedVariant(v)}
                           className={`px-5 py-2.5 rounded-[35px] text-[15px] font-semibold border-2 transition-all duration-200 ${isSelected
-                              ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-md scale-[1.04]'
-                              : 'bg-transparent border-[var(--bg-card-border)] text-[var(--text-secondary)] hover:border-[var(--accent)]'
+                            ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-md scale-[1.04]'
+                            : 'bg-transparent border-[var(--bg-card-border)] text-[var(--text-secondary)] hover:border-[var(--accent)]'
                             }`}
                         >
                           {v.label} &nbsp;·&nbsp; AED {v.price}
@@ -420,9 +474,13 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart }: ProductDetailProp
               {/* Add to Cart Button */}
               <button
                 onClick={handleAddToCart}
-                className="w-full bg-[var(--btn-add-bg)] backdrop-blur-sm shadow-[var(--topbar-shadow)] rounded-[35px] py-4 text-[18px] font-semibold text-[var(--accent)] hover:bg-[var(--btn-add-hover)] transition-all"
+                disabled={!isAvailable}
+                className={`w-full backdrop-blur-sm shadow-[var(--topbar-shadow)] rounded-[35px] py-4 text-[18px] font-semibold transition-all ${isAvailable
+                    ? 'bg-[var(--btn-add-bg)] text-[var(--accent)] hover:bg-[var(--btn-add-hover)]'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
               >
-                Add to Cart
+                {isAvailable ? "Add to Cart" : "Currently Unavailable"}
               </button>
             </div>
           </motion.div>
@@ -554,58 +612,81 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
   const cachedMenu = getCachedMenuData(cachedCats);
 
   const [categories, setCategories] = useState<string[]>(cachedCats);
+  const [categorySchedules, setCategorySchedules] = useState<Record<string, { start: string; end: string; active: boolean }>>({});
+  const [rawMenuItems, setRawMenuItems] = useState<MenuItem[]>([]);
   const [menuData, setMenuData] = useState<Record<string, MenuItem[]>>(cachedMenu ?? {});
   // Only show loading spinner if there is no cached data yet (true first-time visitor)
   const [loading, setLoading] = useState<boolean>(cachedMenu === null);
   const categoryRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  // Re-group menu data whenever raw items or categories change
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    if (rawMenuItems.length > 0 || categories.length > 0) {
+      const organized = buildOrganized(categories, rawMenuItems);
+      setMenuData(organized);
+    }
+  }, [categories, rawMenuItems]);
 
-        // Fetch categories safely
-        let cats = DEFAULT_CATEGORIES;
-        try {
-          const catSnap = await get(ref(db, 'settings/categories'));
-          if (catSnap.exists()) {
-            const saved = catSnap.val();
-            if (Array.isArray(saved) && saved.length > 0) Object.assign(cats, saved);
-            // Wait, wait, actually let's reconstruct the arrays normally.
-            if (Array.isArray(saved) && saved.length > 0) cats = saved;
-          }
-        } catch (e) {
-          console.error("Categories fetch failed", e);
-        }
+  useEffect(() => {
+    setLoading(true);
 
-        // Fetch menu items safely
-        let items: (MenuItem & { category: string })[] = [];
-        try {
-          const response = await fetch(`${apiUrl}/api/menu`);
-          const resItems = await response.json();
-          if (Array.isArray(resItems)) items = resItems;
-        } catch (e) {
-          console.error("Backend fetch failed. Is the server running on port 5000?", e);
-        }
+    // 1. Listen for Categories
+    const categoriesRef = ref(db, 'settings/categories');
+    const unsubscribeCats = onValue(categoriesRef, (snapshot) => {
+      const saved = snapshot.val();
+      const cats = (Array.isArray(saved) && saved.length > 0) ? saved : DEFAULT_CATEGORIES;
+      setCategories(cats);
+      localStorage.setItem(CACHE_CATS_KEY, JSON.stringify(cats));
+    });
 
-        const organized = buildOrganized(cats, items);
-
-        // Update UI 
-        setCategories(cats);
-        setMenuData(organized);
-
-        // Persist fresh data to cache
-        localStorage.setItem(CACHE_CATS_KEY, JSON.stringify(cats));
-        localStorage.setItem(CACHE_MENU_KEY, JSON.stringify(items));
-      } catch (error) {
-        console.error('Core fetch error:', error);
-      } finally {
-        setLoading(false);
+    // 2. Listen for Category Schedules
+    const schedulesRef = ref(db, 'settings/categorySchedules');
+    const unsubscribeScheds = onValue(schedulesRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setCategorySchedules(snapshot.val());
       }
-    };
+    });
 
-    fetchAll();
-  }, []);
+    // 3. Listen for Menu Items
+    const menuRef = ref(db, 'menu_items');
+    const unsubscribeMenu = onValue(menuRef, (snapshot) => {
+      const items = snapshot.val() ? Object.values(snapshot.val()) as MenuItem[] : [];
+      setRawMenuItems(items);
+      localStorage.setItem(CACHE_MENU_KEY, JSON.stringify(items));
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribeCats();
+      unsubscribeScheds();
+      unsubscribeMenu();
+    };
+  }, []); // Mount only - listeners handle updates
+
+  // Compute availability and sorted categories
+  const getCategoryStatus = (cat: string) => {
+    const sched = categorySchedules[cat];
+    return isAvailable(sched);
+  };
+
+  const sortedCategories = [...categories].sort((a, b) => {
+    const aOpen = getCategoryStatus(a);
+    const bOpen = getCategoryStatus(b);
+    if (aOpen === bOpen) return 0;
+    return aOpen ? -1 : 1; // Open comes first
+  });
+
+  const isItemCurrentlyAvailable = (item: MenuItem) => {
+    // Manual override
+    if (item.available === false) return false;
+    // Category schedule
+    if (!getCategoryStatus(item.category)) return false;
+    // Item schedule
+    if (item.schedule && item.schedule.active) {
+      if (!isAvailable(item.schedule)) return false;
+    }
+    return true;
+  };
 
   const handleCategoryClick = (index: number) => {
     // Use data-cat attribute so the scroll is always reliable regardless of
@@ -655,8 +736,8 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
           style={{ top: '60px', position: 'sticky', width: '100%' }}
         >
           <div className="flex items-center px-4 mb-2">
-            <button 
-              onClick={onBackHome} 
+            <button
+              onClick={onBackHome}
               className="p-2 -ml-2 text-gray-600 hover:text-gray-900 transition-colors"
               title="Go Back"
             >
@@ -665,7 +746,7 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
             <span className="ml-2 font-bold text-gray-400 text-sm uppercase tracking-widest">Menu</span>
           </div>
           <SearchBar value={searchQuery} onChange={setSearchQuery} />
-          <CategoryTabs categories={categories} onCategoryClick={handleCategoryClick} />
+          <CategoryTabs categories={categories} sortedCategories={sortedCategories} onCategoryClick={handleCategoryClick} />
         </div>
 
         {/* Skeleton — only shown to true first-time visitors with no cache */}
@@ -690,10 +771,56 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
             ))}
           </div>
         ) : (
-          <MenuList categories={categories} categoryRefs={categoryRefs.current.map((r) => ({ current: r }) as React.RefObject<HTMLDivElement>)} onItemClick={openProductDetail} searchQuery={searchQuery} menuData={menuData} onAddToCart={handleAddItemToCart} />
+          <div className="flex-1 overflow-y-auto px-4 pb-20">
+            {searchQuery ? (
+              <div className="space-y-6">
+                {sortedCategories.map((cat, idx) => {
+                  const filteredItems = (menuData[cat] || []).filter(item =>
+                    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (item.nameAr && item.nameAr.toLowerCase().includes(searchQuery.toLowerCase()))
+                  );
+                  if (filteredItems.length === 0) return null;
+
+                  return (
+                    <div key={cat} data-cat={idx}>
+                      <h3 className="text-[20px] font-bold text-[var(--text-primary)] mb-4">{cat}</h3>
+                      <div className="space-y-4">
+                        {filteredItems.map((item, itemIdx) => (
+                          <MenuItemCard
+                            key={item.id || itemIdx}
+                            item={item}
+                            onClick={openProductDetail}
+                            isAvailable={isItemCurrentlyAvailable(item)}
+                            onAddToCart={handleAddItemToCart}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <MenuList
+                categories={categories}
+                sortedCategories={sortedCategories}
+                setCategoryRef={setCategoryRef}
+                onItemClick={openProductDetail}
+                searchQuery={searchQuery}
+                menuData={menuData}
+                onAddToCart={handleAddItemToCart}
+                isItemAvailable={isItemCurrentlyAvailable}
+              />
+            )}
+          </div>
         )}
       </div>
-      <ProductDetail item={selectedItem} isOpen={isProductDetailOpen} onClose={closeProductDetail} onAddToCart={handleAddItemToCart} />
+      <ProductDetail
+        item={selectedItem}
+        isOpen={isProductDetailOpen}
+        onClose={closeProductDetail}
+        onAddToCart={handleAddItemToCart}
+        isAvailable={selectedItem ? isItemCurrentlyAvailable(selectedItem) : true}
+      />
 
       {/* Floating Cart Capsule */}
       <AnimatePresence>

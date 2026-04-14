@@ -56,7 +56,7 @@ router.get('/:id', async (req, res) => {
 // Add new menu item (admin only)
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { name, description, price, category, image, variants, nameAr } = req.body;
+    const { name, description, price, category, image, variants, nameAr, schedule } = req.body;
     
     const itemId = req.db.ref('menu_items').push().key;
     const newItem = {
@@ -68,6 +68,7 @@ router.post('/', requireAdmin, async (req, res) => {
       category,
       image: image || null,
       available: true,
+      schedule: schedule || null,
       createdAt: new Date().toISOString(),
     };
 
@@ -93,7 +94,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
 
     // Only update fields that are provided
     const updates = {};
-    const allowed = ['name', 'nameAr', 'description', 'price', 'category', 'image', 'available', 'variants'];
+    const allowed = ['name', 'nameAr', 'description', 'price', 'category', 'image', 'available', 'variants', 'schedule'];
     allowed.forEach(field => {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     });

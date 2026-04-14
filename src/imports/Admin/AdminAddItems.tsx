@@ -5,7 +5,7 @@ import LoginSignupModal from "../Auth/LoginSignupModal";
 import { ref, get, set } from "firebase/database";
 import { db } from "../../firebase";
 import { toast } from "sonner";
-import { Trash2, Plus, AlertTriangle, ImagePlus, X, Palette, Pencil } from "lucide-react";
+import { Trash2, Plus, AlertTriangle, ImagePlus, X, Palette, Pencil, Clock } from "lucide-react";
 import { themes, getThemeById, applyTheme, DEFAULT_THEME } from "../../themes";
 import { defaultHomepageSettings, type HomepageSettings } from "../HomePage/useHomepageSettings";
 
@@ -67,6 +67,11 @@ interface MenuItem {
   price: string;
   category: string;
   available?: boolean;
+  schedule?: {
+    start: string;
+    end: string;
+    active: boolean;
+  };
   image?: string;
   variants?: { label: string; price: string }[];
 }
@@ -79,7 +84,14 @@ export default function AdminAddItems() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Form state
-  const [formData, setFormData] = useState<MenuItem>({ name: "", nameAr: "", description: "", price: "", category: "" });
+  const [formData, setFormData] = useState<MenuItem>({ 
+    name: "", 
+    nameAr: "", 
+    description: "", 
+    price: "", 
+    category: "",
+    schedule: { start: "00:00", end: "23:59", active: false }
+  });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -98,6 +110,16 @@ export default function AdminAddItems() {
   const [deliveryRadius, setDeliveryRadius] = useState<number>(20);
   const [savingSettings, setSavingSettings] = useState(false);
 
+  // Category Schedules state
+  const [categorySchedules, setCategorySchedules] = useState<Record<string, { start: string; end: string; active: boolean }>>({});
+  const [savingSchedule, setSavingSchedule] = useState<string | null>(null);
+
+  const getToken = async () => {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) throw new Error("Not authenticated");
+    return token;
+  };
+
   // Image upload
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -115,7 +137,14 @@ export default function AdminAddItems() {
 
   // Edit item
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", nameAr: "", description: "", price: "", category: "" });
+  const [editForm, setEditForm] = useState<MenuItem>({ 
+    name: "", 
+    nameAr: "", 
+    description: "", 
+    price: "", 
+    category: "",
+    schedule: { start: "00:00", end: "23:59", active: false }
+  });
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -142,12 +171,13 @@ export default function AdminAddItems() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [menuRes, radSnap, catSnap, themeSnap, homeSnap] = await Promise.all([
+        const [menuRes, radSnap, catSnap, themeSnap, homeSnap, schedSnap] = await Promise.all([
           fetch(`${API_URL()}/api/menu`),
           get(ref(db, 'settings/deliveryRadiusKm')),
           get(ref(db, 'settings/categories')),
           get(ref(db, 'settings/activeTheme')),
           get(ref(db, 'settings/homepage')),
+          get(ref(db, 'settings/categorySchedules')),
         ]);
 
         if (menuRes.ok) {
@@ -169,6 +199,9 @@ export default function AdminAddItems() {
             aboutHeading: homeData.aboutHeading !== undefined ? homeData.aboutHeading : defaultHomepageSettings.aboutHeading,
             aboutSubheading: homeData.aboutSubheading !== undefined ? homeData.aboutSubheading : defaultHomepageSettings.aboutSubheading,
           });
+        }
+        if (schedSnap.exists()) {
+          setCategorySchedules(schedSnap.val());
         }
       } catch (err) {
         console.error("Failed to load admin data:", err);
@@ -192,11 +225,7 @@ export default function AdminAddItems() {
     }
   }, [categories]);
 
-  const getToken = async () => {
-    const token = await auth.currentUser?.getIdToken();
-    if (!token) throw new Error("Not authenticated");
-    return token;
-  };
+
 
   // ─── Save delivery radius ───────────────────────────────────────
   const saveSettings = async () => {
@@ -211,7 +240,20 @@ export default function AdminAddItems() {
     }
   };
 
-  // ─── Save homepage settings ─────────────────────────────────────
+
+
+  const updateCategorySchedule = async (cat: string, sched: { start: string; end: string; active: boolean }) => {
+    setSavingSchedule(cat);
+    try {
+      await set(ref(db, `settings/categorySchedules/${cat}`), sched);
+      setCategorySchedules(prev => ({ ...prev, [cat]: sched }));
+      toast.success(`Schedule for ${cat} updated!`);
+    } catch {
+      toast.error("Failed to save category schedule.");
+    } finally {
+      setSavingSchedule(null);
+    }
+  };
   const saveHomepageSettings = async () => {
     setSavingHomepageSettings(true);
     const newSettings = structuredClone(homepageSettings);
@@ -395,7 +437,7 @@ export default function AdminAddItems() {
       if (!res.ok) throw new Error('Failed to add item');
       const newItem = await res.json();
       setMessage({ type: "success", text: `✅ ${formData.name} added!` });
-      setFormData({ name: "", nameAr: "", description: "", price: "", category: categories[0] || "" });
+      setFormData({ name: "", nameAr: "", description: "", price: "", category: categories[0] || "", schedule: { start: "00:00", end: "23:59", active: false } });
       setImageFile(null);
       setImagePreview(null);
       setVariants([]);
@@ -507,6 +549,46 @@ export default function AdminAddItems() {
               </select>
             </div>
 
+            {/* ── AUTOMATED SCHEDULE ── */}
+            <div className="mb-6 bg-[var(--bg-primary)] p-5 rounded-[16px] border border-[var(--bg-card-border)]">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <label className="block text-[15px] font-bold text-[var(--text-primary)]">Automated Stock-Out</label>
+                  <p className="text-[12px] text-gray-500">Automatically mark as "Sold Out" outside these hours.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData(p => ({ ...p, schedule: { ...p.schedule!, active: !p.schedule?.active } }))}
+                  className={`w-12 h-7 rounded-full transition-colors relative ${formData.schedule?.active ? 'bg-green-500' : 'bg-gray-300'}`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${formData.schedule?.active ? 'right-1' : 'left-1'}`} />
+                </button>
+              </div>
+
+              {formData.schedule?.active && (
+                <div className="flex gap-4 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Available From</label>
+                    <input 
+                      type="time" 
+                      value={formData.schedule.start} 
+                      onChange={e => setFormData(p => ({ ...p, schedule: { ...p.schedule!, start: e.target.value } }))}
+                      className="w-full px-3 py-2 border border-[var(--bg-input-border)] rounded-[8px] focus:outline-none focus:border-[var(--accent)]" 
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Available Until</label>
+                    <input 
+                      type="time" 
+                      value={formData.schedule.end} 
+                      onChange={e => setFormData(p => ({ ...p, schedule: { ...p.schedule!, end: e.target.value } }))}
+                      className="w-full px-3 py-2 border border-[var(--bg-input-border)] rounded-[8px] focus:outline-none focus:border-[var(--accent)]" 
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Image Upload */}
             <div className="mb-6">
               <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Item Photo <span className="text-gray-400 font-normal">(optional)</span></label>
@@ -590,6 +672,81 @@ export default function AdminAddItems() {
               ))}
             </div>
             <p className="text-[13px] text-gray-400 mt-4">⚠️ You can only delete a category if it has no items.</p>
+          </div>
+
+          {/* ────── CATEGORY SCHEDULES ────── */}
+          <div className="mt-8">
+            <h3 className="text-[20px] font-black text-[var(--text-primary)] mb-4 flex items-center gap-2">
+              <Clock size={20} /> Automated Category Schedules
+            </h3>
+            <p className="text-[13px] text-gray-500 mb-6">
+              Set "Open" and "Close" times for entire categories. Items will automatically appear as "Sold Out" outside these hours.
+            </p>
+            
+            <div className="space-y-4">
+              {categories.map(cat => {
+                const sched = categorySchedules[cat] || { start: "00:00", end: "23:59", active: false };
+                const isSaving = savingSchedule === cat;
+                
+                return (
+                  <div key={cat} className="bg-[var(--bg-card)] rounded-[18px] p-5 shadow-sm border border-[var(--bg-card-border)] flex flex-col md:flex-row md:items-center gap-6">
+                    <div className="flex-1 min-w-[120px]">
+                      <h4 className="font-bold text-[16px] text-[var(--text-primary)] mb-1">{cat}</h4>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${sched.active ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                          {sched.active ? 'AUTO-SCHEDULING ACTIVE' : 'MANUAL CONTROL'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="flex gap-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Start</label>
+                          <input 
+                            type="time" 
+                            value={sched.start}
+                            disabled={!sched.active}
+                            onChange={e => {
+                              const newSched = { ...sched, start: e.target.value };
+                              updateCategorySchedule(cat, newSched);
+                            }}
+                            className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--bg-input-border)] rounded-[8px] text-[14px] disabled:opacity-50 focus:outline-none focus:border-[var(--accent)]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">End</label>
+                          <input 
+                            type="time" 
+                            value={sched.end}
+                            disabled={!sched.active}
+                            onChange={e => {
+                              const newSched = { ...sched, end: e.target.value };
+                              updateCategorySchedule(cat, newSched);
+                            }}
+                            className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--bg-input-border)] rounded-[8px] text-[14px] disabled:opacity-50 focus:outline-none focus:border-[var(--accent)]"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-center">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Status</label>
+                        <button
+                          onClick={() => {
+                            const newSched = { ...sched, active: !sched.active };
+                            updateCategorySchedule(cat, newSched);
+                          }}
+                          disabled={isSaving}
+                          className={`w-12 h-7 rounded-full transition-colors relative ${sched.active ? 'bg-green-500' : 'bg-gray-300'} ${isSaving ? 'opacity-50 cursor-wait' : ''}`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${sched.active ? 'right-1' : 'left-1'}`} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
 
@@ -836,7 +993,10 @@ export default function AdminAddItems() {
                     <button
                       onClick={() => {
                         setEditItem(item);
-                        setEditForm({ name: item.name, nameAr: item.nameAr || "", description: item.description, price: item.price, category: item.category || categories[0] || "" });
+                        setEditForm({ 
+                          ...item, 
+                          schedule: item.schedule || { start: "00:00", end: "23:59", active: false } 
+                        });
                         setEditImagePreview(item.image || null);
                         setEditImageFile(null);
                         setEditVariants(item.variants || []);
@@ -927,6 +1087,46 @@ export default function AdminAddItems() {
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
+
+              {/* Edit Schedule */}
+              <div className="bg-[var(--bg-primary)] p-4 rounded-[12px] border border-[var(--bg-card-border)]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <label className="block text-[14px] font-bold text-[var(--text-primary)]">Automated Stock-Out</label>
+                    <p className="text-[11px] text-gray-500">Auto-hide outside these hours.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditForm(p => ({ ...p, schedule: { ...p.schedule!, active: !p.schedule?.active } }))}
+                    className={`w-10 h-6 rounded-full transition-colors relative ${editForm.schedule?.active ? 'bg-green-500' : 'bg-gray-300'}`}
+                  >
+                    <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${editForm.schedule?.active ? 'right-1' : 'left-1'}`} />
+                  </button>
+                </div>
+
+                {editForm.schedule?.active && (
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 text-center">From</label>
+                      <input 
+                        type="time" 
+                        value={editForm.schedule?.start} 
+                        onChange={e => setEditForm(p => ({ ...p, schedule: { ...p.schedule!, start: e.target.value } }))}
+                        className="w-full px-2 py-1.5 border border-[var(--bg-input-border)] rounded-[8px] text-[13px] focus:outline-none focus:border-[var(--accent)]" 
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 text-center">Until</label>
+                      <input 
+                        type="time" 
+                        value={editForm.schedule?.end} 
+                        onChange={e => setEditForm(p => ({ ...p, schedule: { ...p.schedule!, end: e.target.value } }))}
+                        className="w-full px-2 py-1.5 border border-[var(--bg-input-border)] rounded-[8px] text-[13px] focus:outline-none focus:border-[var(--accent)]" 
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
               <div>
                 <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Photo</label>
                 {editImagePreview ? (
@@ -971,6 +1171,7 @@ export default function AdminAddItems() {
                       body: JSON.stringify({
                         ...editForm,
                         image: imageUrl,
+                        schedule: editForm.schedule, // Include schedule
                         ...(editVariants.length > 0 ? { variants: editVariants, price: editVariants[0].price } : { variants: [] }),
                       }),
                     });

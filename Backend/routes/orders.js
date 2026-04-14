@@ -60,16 +60,43 @@ router.post('/', orderLimiter, async (req, res, next) => {
     }
 
     // Server-Side Stock Validation
-    const menuSnap = await req.db.ref('menu').once('value');
+    const [menuSnap, schedSnap] = await Promise.all([
+      req.db.ref('menu').once('value'),
+      req.db.ref('settings/categorySchedules').once('value')
+    ]);
+
     const menuData = menuSnap.val() || {};
-    const stockMap = {};
-    Object.values(menuData).forEach(menuItem => {
-      stockMap[menuItem.name] = menuItem.available !== false;
-    });
+    const categorySchedules = schedSnap.val() || {};
+
+    const nowDubai = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dubai" }));
+    const currentHM = `${String(nowDubai.getHours()).padStart(2, '0')}:${String(nowDubai.getMinutes()).padStart(2, '0')}`;
+
+    const isTimeAvailable = (sched) => {
+      if (!sched || !sched.active) return true;
+      const { start, end } = sched;
+      if (start <= end) return currentHM >= start && currentHM <= end;
+      return currentHM >= start || currentHM <= end;
+    };
 
     for (const item of items) {
-      if (stockMap[item.name] === false) {
+      // Find the menu item data
+      const menuItem = Object.values(menuData).find(m => m.name === item.name);
+      if (!menuItem) continue;
+
+      // 1. Manual stock check
+      if (menuItem.available === false) {
         return res.status(400).json({ error: `Sorry, ${item.name} is currently out of stock.` });
+      }
+
+      // 2. Category schedule check
+      const catSched = categorySchedules[menuItem.category];
+      if (catSched && !isTimeAvailable(catSched)) {
+        return res.status(400).json({ error: `Sorry, ${item.name} is only available between ${catSched.start} and ${catSched.end}.` });
+      }
+
+      // 3. Item schedule check
+      if (menuItem.schedule && !isTimeAvailable(menuItem.schedule)) {
+        return res.status(400).json({ error: `Sorry, ${item.name} is only available between ${menuItem.schedule.start} and ${menuItem.schedule.end}.` });
       }
     }
 
