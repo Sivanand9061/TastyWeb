@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useAuth } from "../../app/AuthContext";
 import { User, LogIn, ArrowLeft } from "lucide-react";
 import LoginSignupModal from "../Auth/LoginSignupModal";
 import { ref, get, update } from "firebase/database";
