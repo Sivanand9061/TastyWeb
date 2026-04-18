@@ -35,7 +35,7 @@ const getDubaiTime = () => {
   }
 };
 
-const isAvailable = (schedule?: { start?: string; end?: string; active?: boolean }) => {
+export const isAvailable = (schedule?: { start?: string; end?: string; active?: boolean }) => {
   if (!schedule || !schedule.active) return true;
   if (!schedule.start || !schedule.end) return true;
 
@@ -198,6 +198,7 @@ function MenuItemCard({ item, onClick, isAvailable, onAddToCart }: MenuItemCardP
 
   return (
     <div
+      id={`menu-item-${item.name.replace(/\s+/g, '-')}`}
       className={`pb-6 mb-6 border-b border-gray-100 ${isAvailable && !hasVariants ? 'cursor-pointer' : ''} transition-colors ${!isAvailable ? 'opacity-70' : ''}`}
       onClick={() => {
         onClick(item);
@@ -574,7 +575,21 @@ function Footer() {
   );
 }
 
-export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0, onNavigateToCart }: { onBackHome?: () => void; onAddToCart?: (item: MenuItem & { quantity: number }) => void; cartItemsCount?: number; onNavigateToCart?: () => void }) {
+export default function Categories({ 
+  onBackHome, 
+  onAddToCart, 
+  cartItemsCount = 0, 
+  onNavigateToCart,
+  targetItemName,
+  clearTargetItem 
+}: { 
+  onBackHome?: () => void; 
+  onAddToCart?: (item: MenuItem & { quantity: number }) => void; 
+  cartItemsCount?: number; 
+  onNavigateToCart?: () => void;
+  targetItemName?: string | null;
+  clearTargetItem?: () => void;
+}) {
   const CACHE_CATS_KEY = 'tasty_categories_v1';
   const CACHE_MENU_KEY = 'tasty_menu_v1';
 
@@ -654,6 +669,9 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
       setRawMenuItems(items);
       localStorage.setItem(CACHE_MENU_KEY, JSON.stringify(items));
       setLoading(false);
+    }, (error) => {
+      console.error("Firebase Menu error:", error);
+      setLoading(false);
     });
 
     return () => {
@@ -662,6 +680,26 @@ export default function Categories({ onBackHome, onAddToCart, cartItemsCount = 0
       unsubscribeMenu();
     };
   }, []); // Mount only - listeners handle updates
+
+  // Handle auto-scroll parameter
+  useEffect(() => {
+    if (targetItemName && !loading) {
+      setTimeout(() => {
+        const el = document.getElementById(`menu-item-${targetItemName.replace(/\s+/g, '-')}`);
+        if (el) {
+          // Scroll it into view with some top offset due to sticky header
+          const y = el.getBoundingClientRect().top + window.scrollY - 100;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+          
+          // Briefly highlight
+          el.classList.add('bg-red-50/50');
+          setTimeout(() => el.classList.remove('bg-red-50/50'), 1500);
+          
+          if (clearTargetItem) clearTargetItem();
+        }
+      }, 300); // Wait for render
+    }
+  }, [targetItemName, loading, clearTargetItem]);
 
   // Compute availability and sorted categories
   const getCategoryStatus = (cat: string) => {

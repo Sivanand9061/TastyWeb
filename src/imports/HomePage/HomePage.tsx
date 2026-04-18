@@ -1,12 +1,15 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, Plus, Instagram, Facebook, MessageCircle, MapPin } from "lucide-react";
 import { useHomepageSettings } from "./useHomepageSettings";
+import { ref, onValue } from "firebase/database";
+import { db } from "../../firebase";
+import { isAvailable } from "../Categories/CategoriesFixed";
 
 export default function HomePage({
   onExploreClick,
 }: {
-  onExploreClick: () => void;
+  onExploreClick: (itemName?: string) => void;
   cartItemsCount?: number;
   onNavigateToCart?: () => void;
   onNavigateToAdmin?: () => void;
@@ -15,6 +18,54 @@ export default function HomePage({
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const { settings, loading } = useHomepageSettings();
+  
+  const [rawMenuItems, setRawMenuItems] = useState<any[]>([]);
+  const [categorySchedules, setCategorySchedules] = useState<any>({});
+
+  // Fetch menu items and schedules to calculate availability
+  useEffect(() => {
+    const menuRef = ref(db, 'menu_items');
+    const unsubscribeMenu = onValue(menuRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const itemMap = snapshot.val();
+        const items = Object.keys(itemMap).map(key => ({ id: key, ...itemMap[key] }));
+        setRawMenuItems(items);
+      } else {
+        setRawMenuItems([]);
+      }
+    });
+
+    const schedsRef = ref(db, 'settings/categorySchedules');
+    const unsubscribeScheds = onValue(schedsRef, (snapshot) => {
+      if (snapshot.exists()) setCategorySchedules(snapshot.val());
+      else setCategorySchedules({});
+    });
+
+    return () => {
+      unsubscribeMenu();
+      unsubscribeScheds();
+    };
+  }, []);
+
+  const isItemCurrentlyAvailable = (itemTitle: string) => {
+    // Assume available initially to avoid flashes
+    if (rawMenuItems.length === 0) return true;
+
+    const menuItem = rawMenuItems.find(m => m.name === itemTitle);
+    if (!menuItem) return false; // Hide if missing from menu
+    if (menuItem.available === false) return false;
+
+    const catSched = categorySchedules[menuItem.category];
+    if (catSched && catSched.active && !isAvailable(catSched)) return false;
+
+    if (menuItem.schedule && menuItem.schedule.active) {
+      if (!isAvailable(menuItem.schedule)) return false;
+    }
+    
+    return true;
+  };
+
+  const activeCrowdFavorites = settings.crowdFavorites.filter(item => isItemCurrentlyAvailable(item.title));
 
   // IntersectionObserver — reveal cards as they enter the viewport
   useEffect(() => {
@@ -112,13 +163,13 @@ export default function HomePage({
             </h2>
 
             <div className="flex flex-col gap-4">
-              {settings.crowdFavorites.map((item, i) => (
+              {activeCrowdFavorites.map((item, i) => (
                 <div
                   key={item.id}
                   ref={(el) => { cardRefs.current[i] = el; }}
                   className="food-reveal-card relative w-full aspect-[4/5] max-h-[340px] rounded-[16px] overflow-hidden shadow-sm cursor-pointer"
                   style={{ transitionDelay: `${i * 70}ms` }}
-                  onClick={onExploreClick}
+                  onClick={() => onExploreClick(item.title)}
                 >
                   <img
                     src={item.image}
@@ -184,14 +235,26 @@ export default function HomePage({
             <div className="w-[140px] h-[50px] mb-8 grayscale hover:grayscale-0 transition-all duration-300">
               <img src={settings.logoImage} alt="Tasty Hot Logo" className="h-full w-full object-contain" />
             </div>
-            <div className="flex justify-center gap-8 text-[11px] font-bold tracking-widest text-black mb-8 px-4 flex-wrap">
-              <button onClick={onExploreClick} className="uppercase hover:text-[#f51c27] transition-colors">HOME</button>
-              <button onClick={onExploreClick} className="uppercase hover:text-[#f51c27] transition-colors">MENU</button>
-              <button className="uppercase hover:text-[#f51c27] transition-colors">LOCATIONS</button>
-              <button className="uppercase hover:text-[#f51c27] transition-colors">ABOUT US</button>
+            
+            <div className="flex justify-center gap-8 text-[11px] font-bold tracking-widest text-black mb-6 px-4 flex-wrap">
+              <a href={settings.footer?.locationUrl} target="_blank" rel="noreferrer" className="uppercase hover:text-[#f51c27] transition-colors flex items-center gap-1.5"><MapPin size={14}/> LOCATIONS</a>
             </div>
-            <p className="text-[10px] text-gray-400">© 2026 Tasty Hot. All rights reserved.</p>
-            <div className="flex gap-4 mt-2 text-[10px] text-gray-400">
+
+            {/* Social Icons row */}
+            <div className="flex justify-center gap-5 text-gray-400 mb-8">
+              <a href={settings.footer?.whatsappUrl} target="_blank" rel="noreferrer" className="hover:text-[#25D366] transition-colors bg-gray-50 p-3 rounded-full hover:bg-green-50 shadow-sm border border-gray-100">
+                <MessageCircle size={20} />
+              </a>
+              <a href={settings.footer?.instagramUrl} target="_blank" rel="noreferrer" className="hover:text-[#E1306C] transition-colors bg-gray-50 p-3 rounded-full hover:bg-pink-50 shadow-sm border border-gray-100">
+                <Instagram size={20} />
+              </a>
+              <a href={settings.footer?.facebookUrl} target="_blank" rel="noreferrer" className="hover:text-[#1877F2] transition-colors bg-gray-50 p-3 rounded-full hover:bg-blue-50 shadow-sm border border-gray-100">
+                <Facebook size={20} />
+              </a>
+            </div>
+
+            <p className="text-[10px] text-gray-400 mb-2">© 2026 Tasty Hot. All rights reserved.</p>
+            <div className="flex gap-4 text-[10px] text-gray-400">
               <a href="#" className="hover:text-gray-800">Privacy Policy</a>
               <a href="#" className="hover:text-gray-800">Terms of Service</a>
             </div>

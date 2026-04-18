@@ -477,7 +477,9 @@ export default function AdminAddItems() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] p-6 pt-20">
-      <div className="max-w-2xl mx-auto space-y-10">
+      <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* ── LEFT COLUMN ── */}
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-8">
 
         {/* ── ADD ITEM ── */}
         <section>
@@ -633,6 +635,87 @@ export default function AdminAddItems() {
           </form>
         </section>
 
+        
+        {/* ── MANAGE ITEMS ── */}
+        <section>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-[28px] font-black text-[var(--text-primary)]">Menu Items ({menuItems.length})</h2>
+            <button
+              onClick={() => setShowResetModal(true)}
+              className="flex items-center gap-2 bg-red-50 border border-red-300 text-red-600 px-4 py-2 rounded-[12px] font-bold text-[14px] hover:bg-red-100 transition-colors"
+            >
+              <AlertTriangle size={16} /> Reset Menu
+            </button>
+          </div>
+
+          <input
+            type="text"
+            placeholder="Search items..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-3 mb-5 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]"
+          />
+
+          {fetchingMenu ? (
+            <p className="text-center text-gray-500 py-8">Loading menu...</p>
+          ) : filteredItems.length === 0 ? (
+            <p className="text-center text-gray-400 py-8">No items found.</p>
+          ) : (
+            <div className="space-y-3">
+              {filteredItems.map(item => (
+                <div key={item.id} className="bg-[var(--bg-card)] rounded-[16px] p-4 flex items-center justify-between border border-[var(--bg-card-border)] shadow-sm">
+                  <div className="min-w-0 flex-1 mr-4">
+                    <h3 className="font-bold text-[17px] text-[var(--text-primary)] truncate">{item.name}</h3>
+                    <p className="text-gray-500 text-[13px]">AED {item.price} · {item.category}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`text-[12px] font-bold ${item.available !== false ? 'text-green-500' : 'text-red-500'}`}>
+                      {item.available !== false ? 'IN STOCK' : 'OUT'}
+                    </span>
+                    <button
+                      onClick={() => toggleAvailability(item)}
+                      className={`w-12 h-7 rounded-full transition-colors relative ${item.available !== false ? 'bg-green-500' : 'bg-gray-300'}`}
+                    >
+                      <div className={`w-5 h-5 bg-[var(--bg-card)] rounded-full absolute top-1 transition-all ${item.available !== false ? 'right-1' : 'left-1'}`} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditItem(item);
+                        setEditForm({ 
+                          ...item, 
+                          schedule: item.schedule || { start: "00:00", end: "23:59", active: false } 
+                        });
+                        setEditImagePreview(item.image || null);
+                        setEditImageFile(null);
+                        setEditVariants(item.variants || []);
+                        setEditVariantLabel("");
+                        setEditVariantPrice("");
+                      }}
+                      className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit item"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                    <button
+                      onClick={() => deleteItem(item)}
+                      disabled={deletingId === item.id}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
+                      title="Delete item"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        </div>
+
+        {/* ── RIGHT COLUMN ── */}
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-8">
+
         {/* ── CATEGORIES ── */}
         <section>
           <h2 className="text-[28px] font-black text-[var(--text-primary)] mb-5">Manage Categories</h2>
@@ -689,7 +772,7 @@ export default function AdminAddItems() {
                 const isSaving = savingSchedule === cat;
                 
                 return (
-                  <div key={cat} className="bg-[var(--bg-card)] rounded-[18px] p-5 shadow-sm border border-[var(--bg-card-border)] flex flex-col md:flex-row md:items-center gap-6">
+                  <div key={cat} className="bg-[var(--bg-card)] rounded-[18px] p-5 shadow-sm border border-[var(--bg-card-border)] flex flex-col xl:flex-row xl:items-center gap-4 xl:gap-6">
                     <div className="flex-1 min-w-[120px]">
                       <h4 className="font-bold text-[16px] text-[var(--text-primary)] mb-1">{cat}</h4>
                       <div className="flex items-center gap-2">
@@ -699,9 +782,9 @@ export default function AdminAddItems() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      <div className="flex gap-2">
-                        <div>
+                    <div className="flex flex-wrap items-center justify-between gap-4 w-full mt-2 xl:mt-0">
+                      <div className="flex flex-wrap gap-2 flex-1 min-w-[200px]">
+                        <div className="flex-1 min-w-[130px]">
                           <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Start</label>
                           <input 
                             type="time" 
@@ -711,10 +794,10 @@ export default function AdminAddItems() {
                               const newSched = { ...sched, start: e.target.value };
                               updateCategorySchedule(cat, newSched);
                             }}
-                            className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--bg-input-border)] rounded-[8px] text-[14px] disabled:opacity-50 focus:outline-none focus:border-[var(--accent)]"
+                            className="w-full px-3 py-2 bg-[var(--bg-primary)] border border-[var(--bg-input-border)] rounded-[8px] text-[14px] disabled:opacity-50 focus:outline-none focus:border-[var(--accent)]"
                           />
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-[130px]">
                           <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">End</label>
                           <input 
                             type="time" 
@@ -724,7 +807,7 @@ export default function AdminAddItems() {
                               const newSched = { ...sched, end: e.target.value };
                               updateCategorySchedule(cat, newSched);
                             }}
-                            className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--bg-input-border)] rounded-[8px] text-[14px] disabled:opacity-50 focus:outline-none focus:border-[var(--accent)]"
+                            className="w-full px-3 py-2 bg-[var(--bg-primary)] border border-[var(--bg-input-border)] rounded-[8px] text-[14px] disabled:opacity-50 focus:outline-none focus:border-[var(--accent)]"
                           />
                         </div>
                       </div>
@@ -813,7 +896,7 @@ export default function AdminAddItems() {
               <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Crowd Favorite Cards</label>
               <p className="text-[13px] text-gray-500 mb-4">Edit the 4 cards displayed below the hero section. We recommend using square or 4:5 aspect ratio images for these cards.</p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                 {homepageSettings.crowdFavorites.map((card, idx) => (
                   <div key={card.id} className="bg-[var(--bg-primary)] border border-[var(--bg-card-border)] rounded-[16px] p-5 flex flex-col gap-4 shadow-sm">
                     <div className="w-full aspect-[4/5] max-h-[220px] bg-gray-100 rounded-[12px] overflow-hidden relative shadow-inner">
@@ -874,6 +957,50 @@ export default function AdminAddItems() {
                      <textarea rows={3} className="w-full px-4 py-3 bg-[var(--bg-card)] border border-[var(--bg-input-border)] rounded-[12px] text-[14px] text-gray-600 focus:outline-none focus:border-[var(--accent)] transition-colors" value={homepageSettings.aboutSubheading} onChange={e => {
                         const newSettings = structuredClone(homepageSettings);
                         newSettings.aboutSubheading = e.target.value;
+                        setHomepageSettings(newSettings);
+                     }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Settings */}
+            <div>
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Footer Links</label>
+              <p className="text-[13px] text-gray-500 mb-4">Manage the links in the footer of the homepage.</p>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                     <label className="text-[11px] font-bold text-gray-500 tracking-wider uppercase mb-1 block">Location / Google Maps Link</label>
+                     <input type="text" className="w-full px-4 py-3 bg-[var(--bg-card)] border border-[var(--bg-input-border)] rounded-[12px] text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors" value={homepageSettings.footer?.locationUrl || ''} onChange={e => {
+                        const newSettings = structuredClone(homepageSettings);
+                        if (!newSettings.footer) newSettings.footer = defaultHomepageSettings.footer;
+                        newSettings.footer.locationUrl = e.target.value;
+                        setHomepageSettings(newSettings);
+                     }} />
+                </div>
+                <div>
+                     <label className="text-[11px] font-bold text-gray-500 tracking-wider uppercase mb-1 block">WhatsApp Link (wa.me/...)</label>
+                     <input type="text" className="w-full px-4 py-3 bg-[var(--bg-card)] border border-[var(--bg-input-border)] rounded-[12px] text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors" value={homepageSettings.footer?.whatsappUrl || ''} onChange={e => {
+                        const newSettings = structuredClone(homepageSettings);
+                        if (!newSettings.footer) newSettings.footer = defaultHomepageSettings.footer;
+                        newSettings.footer.whatsappUrl = e.target.value;
+                        setHomepageSettings(newSettings);
+                     }} />
+                </div>
+                <div>
+                     <label className="text-[11px] font-bold text-gray-500 tracking-wider uppercase mb-1 block">Instagram Link</label>
+                     <input type="text" className="w-full px-4 py-3 bg-[var(--bg-card)] border border-[var(--bg-input-border)] rounded-[12px] text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors" value={homepageSettings.footer?.instagramUrl || ''} onChange={e => {
+                        const newSettings = structuredClone(homepageSettings);
+                        if (!newSettings.footer) newSettings.footer = defaultHomepageSettings.footer;
+                        newSettings.footer.instagramUrl = e.target.value;
+                        setHomepageSettings(newSettings);
+                     }} />
+                </div>
+                <div>
+                     <label className="text-[11px] font-bold text-gray-500 tracking-wider uppercase mb-1 block">Facebook Link</label>
+                     <input type="text" className="w-full px-4 py-3 bg-[var(--bg-card)] border border-[var(--bg-input-border)] rounded-[12px] text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors" value={homepageSettings.footer?.facebookUrl || ''} onChange={e => {
+                        const newSettings = structuredClone(homepageSettings);
+                        if (!newSettings.footer) newSettings.footer = defaultHomepageSettings.footer;
+                        newSettings.footer.facebookUrl = e.target.value;
                         setHomepageSettings(newSettings);
                      }} />
                 </div>
@@ -948,80 +1075,7 @@ export default function AdminAddItems() {
           </div>
         </section>
 
-        {/* ── MANAGE ITEMS ── */}
-        <section>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[28px] font-black text-[var(--text-primary)]">Menu Items ({menuItems.length})</h2>
-            <button
-              onClick={() => setShowResetModal(true)}
-              className="flex items-center gap-2 bg-red-50 border border-red-300 text-red-600 px-4 py-2 rounded-[12px] font-bold text-[14px] hover:bg-red-100 transition-colors"
-            >
-              <AlertTriangle size={16} /> Reset Menu
-            </button>
-          </div>
-
-          <input
-            type="text"
-            placeholder="Search items..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 mb-5 border border-[var(--bg-input-border)] rounded-[12px] text-[16px] focus:outline-none focus:border-[var(--accent)]"
-          />
-
-          {fetchingMenu ? (
-            <p className="text-center text-gray-500 py-8">Loading menu...</p>
-          ) : filteredItems.length === 0 ? (
-            <p className="text-center text-gray-400 py-8">No items found.</p>
-          ) : (
-            <div className="space-y-3">
-              {filteredItems.map(item => (
-                <div key={item.id} className="bg-[var(--bg-card)] rounded-[16px] p-4 flex items-center justify-between border border-[var(--bg-card-border)] shadow-sm">
-                  <div className="min-w-0 flex-1 mr-4">
-                    <h3 className="font-bold text-[17px] text-[var(--text-primary)] truncate">{item.name}</h3>
-                    <p className="text-gray-500 text-[13px]">AED {item.price} · {item.category}</p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`text-[12px] font-bold ${item.available !== false ? 'text-green-500' : 'text-red-500'}`}>
-                      {item.available !== false ? 'IN STOCK' : 'OUT'}
-                    </span>
-                    <button
-                      onClick={() => toggleAvailability(item)}
-                      className={`w-12 h-7 rounded-full transition-colors relative ${item.available !== false ? 'bg-green-500' : 'bg-gray-300'}`}
-                    >
-                      <div className={`w-5 h-5 bg-[var(--bg-card)] rounded-full absolute top-1 transition-all ${item.available !== false ? 'right-1' : 'left-1'}`} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditItem(item);
-                        setEditForm({ 
-                          ...item, 
-                          schedule: item.schedule || { start: "00:00", end: "23:59", active: false } 
-                        });
-                        setEditImagePreview(item.image || null);
-                        setEditImageFile(null);
-                        setEditVariants(item.variants || []);
-                        setEditVariantLabel("");
-                        setEditVariantPrice("");
-                      }}
-                      className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Edit item"
-                    >
-                      <Pencil size={18} />
-                    </button>
-                    <button
-                      onClick={() => deleteItem(item)}
-                      disabled={deletingId === item.id}
-                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
-                      title="Delete item"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        </div>
 
         {/* Bottom padding */}
         <div className="h-24" />

@@ -35,6 +35,7 @@ export default function App() {
   const { currentUser, isAdmin } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const { settings } = useHomepageSettings();
+  const [targetItemName, setTargetItemName] = useState<string | null>(null);
 
   // Persist current page to localStorage
   useEffect(() => {
@@ -46,7 +47,8 @@ export default function App() {
     localStorage.setItem('cartItems', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const handleExploreMenu = () => {
+  const handleExploreMenu = (itemName?: string) => {
+    setTargetItemName(typeof itemName === 'string' ? itemName : null);
     setCurrentPage('menu');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -137,7 +139,7 @@ export default function App() {
         {currentPage === 'home' ? (
           <HomePage onExploreClick={handleExploreMenu} cartItemsCount={cartItems.length} onNavigateToCart={handleGoToCart} onNavigateToAdmin={handleGoToAdmin} onNavigateToProfile={handleGoToProfile} />
         ) : currentPage === 'menu' ? (
-          <Categories onBackHome={handleBackToHome} onAddToCart={handleAddToCart} cartItemsCount={cartItems.length} onNavigateToCart={handleGoToCart} />
+          <Categories onBackHome={handleBackToHome} onAddToCart={handleAddToCart} cartItemsCount={cartItems.length} onNavigateToCart={handleGoToCart} targetItemName={targetItemName} clearTargetItem={() => setTargetItemName(null)} />
         ) : currentPage === 'cart' ? (
           <CartPage cartItems={cartItems} onBackHome={handleBackToHome} onContinueShopping={handleContinueShopping} onClearCart={handleClearCart} onNavigateToProfile={handleGoToProfile} />
         ) : currentPage === 'admin' ? (

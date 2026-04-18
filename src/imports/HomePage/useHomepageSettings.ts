@@ -10,12 +10,20 @@ export interface CrowdFavorite {
   action: 'add' | 'arrow';
 }
 
+export interface FooterSettings {
+  locationUrl: string;
+  whatsappUrl: string;
+  instagramUrl: string;
+  facebookUrl: string;
+}
+
 export interface HomepageSettings {
   logoImage: string;
   heroImage: string;
   crowdFavorites: CrowdFavorite[];
   aboutHeading: string;
   aboutSubheading: string;
+  footer: FooterSettings;
 }
 
 const defaultCrowdFavorites: CrowdFavorite[] = [
@@ -55,6 +63,12 @@ export const defaultHomepageSettings: HomepageSettings = {
   crowdFavorites: defaultCrowdFavorites,
   aboutHeading: "Our Story",
   aboutSubheading: "We started with a simple passion for incredible flavor...",
+  footer: {
+    locationUrl: "https://maps.google.com/?q=Tasty+Hot+Ajman",
+    whatsappUrl: "https://wa.me/971505012081",
+    instagramUrl: "https://instagram.com/tastyhot",
+    facebookUrl: "https://facebook.com/tastyhot",
+  }
 };
 
 export function useHomepageSettings() {
@@ -75,6 +89,7 @@ export function useHomepageSettings() {
           crowdFavorites: data.crowdFavorites || defaultHomepageSettings.crowdFavorites,
           aboutHeading: data.aboutHeading !== undefined ? data.aboutHeading : defaultHomepageSettings.aboutHeading,
           aboutSubheading: data.aboutSubheading !== undefined ? data.aboutSubheading : defaultHomepageSettings.aboutSubheading,
+          footer: data.footer || defaultHomepageSettings.footer,
         });
       } else {
         setSettings(defaultHomepageSettings);
