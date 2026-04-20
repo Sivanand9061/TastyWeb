@@ -48,12 +48,12 @@ export default function HomePage({
   }, []);
 
   const isItemCurrentlyAvailable = (itemTitle: string) => {
-    // Assume available initially to avoid flashes
+    // If menu hasn't loaded yet, show everything to avoid flashes
     if (rawMenuItems.length === 0) return true;
 
     const menuItem = rawMenuItems.find(m => m.name === itemTitle);
-    if (!menuItem) return false; // Hide if missing from menu
-    if (menuItem.available === false) return false;
+    if (!menuItem) return false; // Hide if no matching menu item
+    if (menuItem.available === false) return false; // Hide if stocked out
 
     const catSched = categorySchedules[menuItem.category];
     if (catSched && catSched.active && !isAvailable(catSched)) return false;
@@ -67,19 +67,31 @@ export default function HomePage({
 
   const activeCrowdFavorites = settings.crowdFavorites.filter(item => isItemCurrentlyAvailable(item.title));
 
-  // IntersectionObserver — reveal cards as they enter the viewport
+  // IntersectionObserver — reveal cards as they enter the viewport.
+  // Depends on activeCrowdFavorites.length so it re-runs after Firebase loads the cards.
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) entry.target.classList.add("card-visible");
-        });
-      },
-      { threshold: 0.1 }
-    );
-    cardRefs.current.forEach((el) => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
+    // Small delay so the DOM elements are painted before we observe them
+    const tid = setTimeout(() => {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) entry.target.classList.add("card-visible");
+          });
+        },
+        { threshold: 0.05 }
+      );
+      cardRefs.current.forEach((el) => el && observer.observe(el));
+      // Also immediately mark any card already in view (e.g. top of page)
+      cardRefs.current.forEach((el) => {
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top < window.innerHeight) el.classList.add("card-visible");
+        }
+      });
+      return () => observer.disconnect();
+    }, 100);
+    return () => clearTimeout(tid);
+  }, [activeCrowdFavorites.length]);
 
   return (
     <>

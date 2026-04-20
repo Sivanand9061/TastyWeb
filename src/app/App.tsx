@@ -105,8 +105,12 @@ export default function App() {
       {/* Global White Header for App Shell */}
       {isShellPage && (
         <div className="sticky top-0 z-50 bg-[#eaeaec] h-[60px] flex items-center justify-between px-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)]">
-          <div className="h-[60px] cursor-pointer flex items-center pl-2 relative" onClick={handleBackToHome}>
-            <img alt="Tasty Hot Logo" className="h-[60px] w-auto max-w-[200px] object-contain object-left transform scale-[2] origin-left translate-x-2" src={settings.logoImage} />
+          <div className="flex items-center cursor-pointer h-full py-1" onClick={handleBackToHome}>
+            <img
+              alt="Tasty Hot Logo"
+              src={settings.logoImage}
+              className="h-[48px] w-auto max-w-[160px] object-contain"
+            />
           </div>
           
           <div className="flex-1" />

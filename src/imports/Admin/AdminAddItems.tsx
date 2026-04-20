@@ -164,8 +164,16 @@ export default function AdminAddItems() {
   const [homepageLogoFile, setHomepageLogoFile] = useState<File | null>(null);
   const [homepageHeroPreview, setHomepageHeroPreview] = useState<string | null>(null);
   const [homepageHeroFile, setHomepageHeroFile] = useState<File | null>(null);
-  const [crowdFavoriteFiles, setCrowdFavoriteFiles] = useState<(File | null)[]>([null, null, null, null]);
-  const [crowdFavoritePreviews, setCrowdFavoritePreviews] = useState<(string | null)[]>([null, null, null, null]);
+  // Per-card file map: key = card index, value = File
+  const [crowdFavoriteFiles, setCrowdFavoriteFiles] = useState<Record<number, File>>({});
+
+  // Card editor modal state
+  const [cardEditorOpen, setCardEditorOpen] = useState(false);
+  const [cardEditorIndex, setCardEditorIndex] = useState<number | null>(null); // null = new card
+  const [cardEditorForm, setCardEditorForm] = useState<{ title: string; subtitle: string; action: 'add' | 'arrow'; image: string }>({ title: '', subtitle: '', action: 'add', image: '' });
+  const [cardEditorFile, setCardEditorFile] = useState<File | null>(null);
+  const [cardEditorPreview, setCardEditorPreview] = useState<string | null>(null);
+  const [savingCard, setSavingCard] = useState(false);
 
   // Load everything on mount
   useEffect(() => {
@@ -192,12 +200,18 @@ export default function AdminAddItems() {
         if (themeSnap.exists()) setActiveTheme(themeSnap.val());
         if (homeSnap.exists()) {
           const homeData = homeSnap.val();
+          // Normalise crowdFavorites: Firebase may return an object with numeric keys
+          let crowdFavs = homeData.crowdFavorites || defaultHomepageSettings.crowdFavorites;
+          if (crowdFavs && !Array.isArray(crowdFavs)) {
+            crowdFavs = Object.values(crowdFavs);
+          }
           setHomepageSettings({
             logoImage: homeData.logoImage || defaultHomepageSettings.logoImage,
             heroImage: homeData.heroImage || defaultHomepageSettings.heroImage,
-            crowdFavorites: homeData.crowdFavorites || defaultHomepageSettings.crowdFavorites,
+            crowdFavorites: crowdFavs,
             aboutHeading: homeData.aboutHeading !== undefined ? homeData.aboutHeading : defaultHomepageSettings.aboutHeading,
             aboutSubheading: homeData.aboutSubheading !== undefined ? homeData.aboutSubheading : defaultHomepageSettings.aboutSubheading,
+            footer: homeData.footer || defaultHomepageSettings.footer,
           });
         }
         if (schedSnap.exists()) {
@@ -264,10 +278,11 @@ export default function AdminAddItems() {
       if (homepageHeroFile) {
         newSettings.heroImage = await uploadToCloudinary(homepageHeroFile);
       }
-      for (let i = 0; i < crowdFavoriteFiles.length; i++) {
-        const file = crowdFavoriteFiles[i];
-        if (file) {
-          newSettings.crowdFavorites[i].image = await uploadToCloudinary(file);
+      // Upload any staged card images
+      for (const [idxStr, file] of Object.entries(crowdFavoriteFiles)) {
+        const idx = Number(idxStr);
+        if (file && newSettings.crowdFavorites[idx]) {
+          newSettings.crowdFavorites[idx].image = await uploadToCloudinary(file);
         }
       }
 
@@ -278,14 +293,81 @@ export default function AdminAddItems() {
       setHomepageLogoPreview(null);
       setHomepageHeroFile(null);
       setHomepageHeroPreview(null);
-      setCrowdFavoriteFiles([null, null, null, null]);
-      setCrowdFavoritePreviews([null, null, null, null]);
+      setCrowdFavoriteFiles({});
 
       toast.success("Homepage settings saved!");
     } catch {
       toast.error("Failed to save homepage settings.");
     } finally {
       setSavingHomepageSettings(false);
+    }
+  };
+
+  // ─── Open card editor ───────────────────────────────────────────
+  const openCardEditor = (idx: number | null) => {
+    if (idx === null) {
+      // New card
+      setCardEditorForm({ title: '', subtitle: '', action: 'add', image: '' });
+      setCardEditorFile(null);
+      setCardEditorPreview(null);
+    } else {
+      const card = homepageSettings.crowdFavorites[idx];
+      setCardEditorForm({ title: card.title, subtitle: card.subtitle, action: card.action, image: card.image });
+      setCardEditorFile(null);
+      setCardEditorPreview(card.image);
+    }
+    setCardEditorIndex(idx);
+    setCardEditorOpen(true);
+  };
+
+  // ─── Save card from modal ───────────────────────────────────────
+  const saveCard = async () => {
+    setSavingCard(true);
+    try {
+      const newSettings = structuredClone(homepageSettings);
+
+      // cardEditorForm.image holds the current URL (may be auto-filled from menu item)
+      // Only upload to Cloudinary if the admin picked a new local file
+      let imageUrl = cardEditorForm.image;
+      if (cardEditorFile) {
+        imageUrl = await uploadToCloudinary(cardEditorFile);
+      }
+
+      const cardData = { ...cardEditorForm, image: imageUrl };
+
+      if (cardEditorIndex === null) {
+        // Add new card
+        const newId = Date.now();
+        newSettings.crowdFavorites.push({ id: newId, ...cardData });
+      } else {
+        // Update existing
+        newSettings.crowdFavorites[cardEditorIndex] = {
+          ...newSettings.crowdFavorites[cardEditorIndex],
+          ...cardData,
+        };
+      }
+
+      await set(ref(db, 'settings/homepage'), newSettings);
+      setHomepageSettings(newSettings);
+      setCardEditorOpen(false);
+      toast.success(cardEditorIndex === null ? 'Card added!' : 'Card updated!');
+    } catch {
+      toast.error('Failed to save card.');
+    } finally {
+      setSavingCard(false);
+    }
+  };
+
+  // ─── Delete a crowd favorite card ──────────────────────────────
+  const deleteCard = async (idx: number) => {
+    const newSettings = structuredClone(homepageSettings);
+    newSettings.crowdFavorites.splice(idx, 1);
+    try {
+      await set(ref(db, 'settings/homepage'), newSettings);
+      setHomepageSettings(newSettings);
+      toast.success('Card removed.');
+    } catch {
+      toast.error('Failed to remove card.');
     }
   };
 
@@ -893,46 +975,55 @@ export default function AdminAddItems() {
 
             {/* Crowd Favorites */}
             <div>
-              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Crowd Favorite Cards</label>
-              <p className="text-[13px] text-gray-500 mb-4">Edit the 4 cards displayed below the hero section. We recommend using square or 4:5 aspect ratio images for these cards.</p>
-              
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-[15px] font-semibold text-[var(--text-primary)]">Crowd Favorite Cards</label>
+                <button
+                  type="button"
+                  onClick={() => openCardEditor(null)}
+                  className="flex items-center gap-1.5 bg-[#1c1c1a] text-white px-4 py-2 rounded-[10px] font-bold text-[13px] hover:bg-gray-800 transition-colors"
+                >
+                  <Plus size={15} /> Add Card
+                </button>
+              </div>
+              <p className="text-[13px] text-gray-500 mb-4">These cards appear below the hero section. Tap the pencil to edit or trash to remove. We recommend 4:5 aspect ratio images.</p>
+
+              {homepageSettings.crowdFavorites.length === 0 && (
+                <p className="text-center text-gray-400 text-[14px] py-6">No cards yet. Click "Add Card" to create one.</p>
+              )}
+
+              <div className="flex flex-col gap-3">
                 {homepageSettings.crowdFavorites.map((card, idx) => (
-                  <div key={card.id} className="bg-[var(--bg-primary)] border border-[var(--bg-card-border)] rounded-[16px] p-5 flex flex-col gap-4 shadow-sm">
-                    <div className="w-full aspect-[4/5] max-h-[220px] bg-gray-100 rounded-[12px] overflow-hidden relative shadow-inner">
-                      <img src={crowdFavoritePreviews[idx] || card.image} className="w-full h-full object-cover" alt={card.title} />
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
-                      <label className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm shadow-md text-black px-3 py-1.5 rounded-[8px] text-[12px] font-bold cursor-pointer hover:bg-white transition-all hover:scale-105 active:scale-95">
-                        Change Image
-                        <input type="file" accept="image/*" className="hidden" onChange={e => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const newFiles = [...crowdFavoriteFiles];
-                            newFiles[idx] = file;
-                            setCrowdFavoriteFiles(newFiles);
-                            
-                            const newPreviews = [...crowdFavoritePreviews];
-                            newPreviews[idx] = URL.createObjectURL(file);
-                            setCrowdFavoritePreviews(newPreviews);
-                          }
-                        }} />
-                      </label>
+                  <div key={card.id} className="bg-[var(--bg-primary)] border border-[var(--bg-card-border)] rounded-[16px] p-4 flex items-center gap-4 shadow-sm">
+                    {/* Thumbnail */}
+                    <div className="w-16 h-16 rounded-[10px] overflow-hidden flex-shrink-0 bg-gray-100">
+                      <img src={card.image} className="w-full h-full object-cover" alt={card.title} />
                     </div>
-                    <div>
-                         <label className="text-[11px] font-bold text-gray-500 tracking-wider uppercase mb-1 block">Title</label>
-                         <input type="text" className="w-full px-4 py-3 bg-[var(--bg-card)] border border-[var(--bg-input-border)] rounded-[12px] text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors" value={card.title} onChange={e => {
-                            const newSettings = structuredClone(homepageSettings);
-                            newSettings.crowdFavorites[idx].title = e.target.value;
-                            setHomepageSettings(newSettings);
-                         }} />
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-[15px] text-[var(--text-primary)] truncate">{card.title || <span className="text-gray-400 italic">Untitled</span>}</p>
+                      <p className="text-[12px] text-gray-500 truncate">{card.subtitle}</p>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                        {card.action === 'add' ? '+ ADD BUTTON' : '→ ARROW BUTTON'}
+                      </span>
                     </div>
-                    <div>
-                         <label className="text-[11px] font-bold text-gray-500 tracking-wider uppercase mb-1 block">Subtitle</label>
-                         <input type="text" className="w-full px-4 py-3 bg-[var(--bg-card)] border border-[var(--bg-input-border)] rounded-[12px] text-[14px] text-gray-600 focus:outline-none focus:border-[var(--accent)] transition-colors" value={card.subtitle} onChange={e => {
-                            const newSettings = structuredClone(homepageSettings);
-                            newSettings.crowdFavorites[idx].subtitle = e.target.value;
-                            setHomepageSettings(newSettings);
-                         }} />
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => openCardEditor(idx)}
+                        className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit card"
+                      >
+                        <Pencil size={17} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteCard(idx)}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Remove card"
+                      >
+                        <Trash2 size={17} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1080,6 +1171,136 @@ export default function AdminAddItems() {
         {/* Bottom padding */}
         <div className="h-24" />
       </div>
+
+      {/* ── CARD EDITOR MODAL ── */}
+      {cardEditorOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center">
+          <div className="bg-[var(--bg-card)] rounded-t-[24px] sm:rounded-[24px] p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-[22px] font-black text-[var(--text-primary)]">
+                {cardEditorIndex === null ? 'Add New Card' : 'Edit Card'}
+              </h3>
+              <button onClick={() => setCardEditorOpen(false)} className="p-2 hover:bg-gray-100 rounded-full"><X size={20} /></button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Image */}
+              <div>
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-2">Card Image</label>
+                {cardEditorPreview ? (
+                  <div className="relative">
+                    <img src={cardEditorPreview} alt="Preview" className="w-full h-[200px] object-cover rounded-[14px] border border-[var(--bg-card-border)]" />
+                    <button
+                      type="button"
+                      onClick={() => { setCardEditorFile(null); setCardEditorPreview(null); setCardEditorForm(p => ({ ...p, image: '' })); }}
+                      className="absolute top-2 right-2 bg-[var(--bg-card)] rounded-full p-1.5 shadow-md hover:bg-red-50"
+                    >
+                      <X size={14} className="text-red-500" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center gap-2 w-full h-[160px] border-2 border-dashed border-[var(--bg-input-border)] rounded-[14px] cursor-pointer hover:border-[var(--accent)] transition-colors text-gray-400 hover:text-[var(--accent)]">
+                    <ImagePlus size={28} />
+                    <span className="text-[14px] font-medium">Tap to pick an image</span>
+                    <span className="text-[12px]">JPG, PNG, WEBP up to 10MB</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setCardEditorFile(file);
+                        setCardEditorPreview(URL.createObjectURL(file));
+                      }
+                    }} />
+                  </label>
+                )}
+              </div>
+
+              {/* Menu Item picker — title must match a real menu item */}
+              <div>
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Menu Item *</label>
+                <p className="text-[12px] text-gray-400 mb-2">Cards are linked to a menu item. The card hides automatically when that item is stocked out.</p>
+                <select
+                  value={cardEditorForm.title}
+                  onChange={e => {
+                    const selectedName = e.target.value;
+                    const matched = menuItems.find(m => m.name === selectedName);
+                    setCardEditorForm(p => ({
+                      ...p,
+                      title: selectedName,
+                      // Auto-fill image from menu item if no custom image set yet
+                      image: (p.image || !matched?.image) ? p.image : matched?.image || '',
+                    }));
+                    // Auto-fill image preview from menu item if no file chosen yet
+                    if (matched?.image && !cardEditorFile) {
+                      setCardEditorPreview(matched.image);
+                      setCardEditorForm(p => ({ ...p, title: selectedName, image: matched.image || '' }));
+                    }
+                  }}
+                  className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)]"
+                >
+                  <option value="">— Select a menu item —</option>
+                  {menuItems.map(item => (
+                    <option key={item.id} value={item.name}>
+                      {item.name} {item.available === false ? '(Out of Stock)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subtitle */}
+              <div>
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-1">Subtitle / Description</label>
+                <input
+                  type="text"
+                  value={cardEditorForm.subtitle}
+                  onChange={e => setCardEditorForm(p => ({ ...p, subtitle: e.target.value }))}
+                  placeholder="e.g., Original or Spicy Bone-in"
+                  className="w-full px-4 py-3 border border-[var(--bg-input-border)] rounded-[12px] text-[14px] focus:outline-none focus:border-[var(--accent)]"
+                />
+              </div>
+
+              {/* Button style */}
+              <div>
+                <label className="block text-[14px] font-semibold text-[var(--text-primary)] mb-2">Card Button Style</label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setCardEditorForm(p => ({ ...p, action: 'add' }))}
+                    className={`flex-1 py-3 rounded-[12px] font-bold text-[14px] border-2 transition-all ${
+                      cardEditorForm.action === 'add'
+                        ? 'border-[var(--accent)] bg-red-50 text-[var(--accent)]'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    + Add Button
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardEditorForm(p => ({ ...p, action: 'arrow' }))}
+                    className={`flex-1 py-3 rounded-[12px] font-bold text-[14px] border-2 transition-all ${
+                      cardEditorForm.action === 'arrow'
+                        ? 'border-[var(--accent)] bg-red-50 text-[var(--accent)]'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    → Arrow Button
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setCardEditorOpen(false)} className="flex-1 py-3 border-2 border-gray-200 rounded-[12px] font-bold text-gray-600 hover:bg-gray-50">Cancel</button>
+              <button
+                disabled={savingCard || !cardEditorForm.title.trim()}
+                onClick={saveCard}
+                className="flex-1 py-3 bg-[var(--accent)] text-white rounded-[12px] font-bold hover:bg-[var(--accent-hover)] disabled:opacity-40 transition-colors"
+              >
+                {savingCard ? 'Saving...' : (cardEditorIndex === null ? 'Add Card' : 'Save Changes')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── EDIT ITEM MODAL ── */}
       {editItem && (

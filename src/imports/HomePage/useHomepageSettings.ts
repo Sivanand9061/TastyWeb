@@ -81,12 +81,16 @@ export function useHomepageSettings() {
       if (snapshot.exists()) {
         const data = snapshot.val();
         
-        // Merge with defaults to ensure all fields are present, especially if 
-        // the admin hasn't saved all parts of the settings yet.
+        // Firebase RTDB may return arrays as objects with numeric keys — normalise
+        let crowdFavs = data.crowdFavorites || defaultHomepageSettings.crowdFavorites;
+        if (crowdFavs && !Array.isArray(crowdFavs)) {
+          crowdFavs = Object.values(crowdFavs);
+        }
+
         setSettings({
           logoImage: data.logoImage || defaultHomepageSettings.logoImage,
           heroImage: data.heroImage || defaultHomepageSettings.heroImage,
-          crowdFavorites: data.crowdFavorites || defaultHomepageSettings.crowdFavorites,
+          crowdFavorites: crowdFavs,
           aboutHeading: data.aboutHeading !== undefined ? data.aboutHeading : defaultHomepageSettings.aboutHeading,
           aboutSubheading: data.aboutSubheading !== undefined ? data.aboutSubheading : defaultHomepageSettings.aboutSubheading,
           footer: data.footer || defaultHomepageSettings.footer,

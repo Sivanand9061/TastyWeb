@@ -477,8 +477,8 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart, isAvailable }: Prod
                 onClick={handleAddToCart}
                 disabled={!isAvailable}
                 className={`w-full backdrop-blur-sm shadow-[var(--topbar-shadow)] rounded-[35px] py-4 text-[18px] font-semibold transition-all ${isAvailable
-                    ? 'bg-[var(--btn-add-bg)] text-[var(--accent)] hover:bg-[var(--btn-add-hover)]'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  ? 'bg-[var(--btn-add-bg)] text-[var(--accent)] hover:bg-[var(--btn-add-hover)]'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   }`}
               >
                 {isAvailable ? "Add to Cart" : "Currently Unavailable"}
@@ -575,17 +575,17 @@ function Footer() {
   );
 }
 
-export default function Categories({ 
-  onBackHome, 
-  onAddToCart, 
-  cartItemsCount = 0, 
+export default function Categories({
+  onBackHome,
+  onAddToCart,
+  cartItemsCount = 0,
   onNavigateToCart,
   targetItemName,
-  clearTargetItem 
-}: { 
-  onBackHome?: () => void; 
-  onAddToCart?: (item: MenuItem & { quantity: number }) => void; 
-  cartItemsCount?: number; 
+  clearTargetItem
+}: {
+  onBackHome?: () => void;
+  onAddToCart?: (item: MenuItem & { quantity: number }) => void;
+  cartItemsCount?: number;
   onNavigateToCart?: () => void;
   targetItemName?: string | null;
   clearTargetItem?: () => void;
@@ -681,25 +681,32 @@ export default function Categories({
     };
   }, []); // Mount only - listeners handle updates
 
-  // Handle auto-scroll parameter
+  // Handle auto-open when coming from a home page card tap
   useEffect(() => {
     if (targetItemName && !loading) {
       setTimeout(() => {
-        const el = document.getElementById(`menu-item-${targetItemName.replace(/\s+/g, '-')}`);
-        if (el) {
-          // Scroll it into view with some top offset due to sticky header
-          const y = el.getBoundingClientRect().top + window.scrollY - 100;
-          window.scrollTo({ top: y, behavior: 'smooth' });
-          
-          // Briefly highlight
-          el.classList.add('bg-red-50/50');
-          setTimeout(() => el.classList.remove('bg-red-50/50'), 1500);
-          
-          if (clearTargetItem) clearTargetItem();
+        // Find the matching menu item across all categories
+        const allItems = Object.values(menuData).flat();
+        const matched = allItems.find(item => item.name === targetItemName);
+
+        if (matched) {
+          // Open the ProductDetail slide-up modal
+          openProductDetail(matched);
+        } else {
+          // Fallback: scroll to the item row if modal can't open
+          const el = document.getElementById(`menu-item-${targetItemName.replace(/\s+/g, '-')}`);
+          if (el) {
+            const y = el.getBoundingClientRect().top + window.scrollY - 100;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+            el.classList.add('bg-red-50/50');
+            setTimeout(() => el.classList.remove('bg-red-50/50'), 1500);
+          }
         }
-      }, 300); // Wait for render
+
+        if (clearTargetItem) clearTargetItem();
+      }, 350); // Wait for render + transition
     }
-  }, [targetItemName, loading, clearTargetItem]);
+  }, [targetItemName, loading, menuData, clearTargetItem]);
 
   // Compute availability and sorted categories
   const getCategoryStatus = (cat: string) => {
