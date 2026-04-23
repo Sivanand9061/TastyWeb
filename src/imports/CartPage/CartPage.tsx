@@ -151,7 +151,16 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
       setDistanceError("");
       setIsSubmitting(false);
       setOrderType(null); // Reset order type each time form opens
+
+      // Prevent background scrolling while modal is open
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen, currentUser]);
 
   // Validation functions
@@ -747,8 +756,8 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
 
   return (
     <div className="min-h-screen bg-[#fbf4e8]">
-      {/* Simple Sticky Header matching Profile Page */}
-      <div className="sticky top-0 bg-white/80 backdrop-blur-md z-50 border-b border-gray-200">
+      {/* Header */}
+      <div className="relative bg-[#fbf4e8] border-b border-[#e5dfd5]">
         <div className="max-w-2xl mx-auto px-4 h-[70px] flex items-center">
           <button 
             onClick={onBackHome} 

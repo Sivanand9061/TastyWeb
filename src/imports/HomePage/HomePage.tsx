@@ -221,7 +221,10 @@ export default function HomePage({
   return (
     <>
       {/* ── HERO BANNER — scrolls away naturally, NOT sticky ── */}
-      <div className="relative w-full overflow-hidden" style={{ height: 220 }}>
+      <div 
+        className="relative w-full overflow-hidden" 
+        style={{ height: 'calc(240px + env(safe-area-inset-top))' }}
+      >
         <img
           src={settings.heroImage}
           alt="Tasty Hot Banner"
@@ -232,13 +235,16 @@ export default function HomePage({
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
 
         {/* ── Top Header inside Banner ── */}
-        <div className="absolute top-0 left-0 right-0 z-20 px-5 pt-4 flex items-center justify-between">
+        <div 
+          className="absolute top-0 left-0 right-0 z-20 px-5 flex items-center justify-between"
+          style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}
+        >
           {/* Logo */}
           <div className="flex items-center h-[40px]">
             <img 
               src={settings.logoImage} 
               alt="Tasty Hot Logo" 
-              className="h-full w-auto max-w-[140px] object-contain brightness-0 invert" 
+              className="h-full w-auto max-w-[140px] object-contain drop-shadow-md" 
             />
           </div>
           {/* Profile / Admin Actions */}
