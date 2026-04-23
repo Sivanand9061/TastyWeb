@@ -26,6 +26,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'menu' | 'cart' | 'admin' | 'profile' | 'kitchen'>(
     (typeof window !== 'undefined' && localStorage.getItem('currentPage') as 'home' | 'menu' | 'cart' | 'admin' | 'profile' | 'kitchen') || 'home'
   );
+  const [orderType, setOrderType] = useState<'delivery' | 'takeaway'>('delivery');
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     if (typeof window === 'undefined') return [];
     const saved = localStorage.getItem('cartItems');
@@ -49,6 +50,18 @@ export default function App() {
 
   const handleExploreMenu = (itemName?: string) => {
     setTargetItemName(typeof itemName === 'string' ? itemName : null);
+    setCurrentPage('menu');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeliveryClick = () => {
+    setOrderType('delivery');
+    setCurrentPage('menu');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleTakeawayClick = () => {
+    setOrderType('takeaway');
     setCurrentPage('menu');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -103,7 +116,7 @@ export default function App() {
   return (
     <div className="size-full bg-white relative pb-20">
       {/* Global White Header for App Shell */}
-      {isShellPage && (
+      {isShellPage && currentPage !== 'home' && (
         <div className="sticky top-0 z-50 bg-[#eaeaec] h-[60px] flex items-center justify-between px-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)]">
           <div className="flex items-center cursor-pointer h-full py-1" onClick={handleBackToHome}>
             <img
@@ -141,11 +154,21 @@ export default function App() {
       {/* Pages */}
       <main className="w-full">
         {currentPage === 'home' ? (
-          <HomePage onExploreClick={handleExploreMenu} cartItemsCount={cartItems.length} onNavigateToCart={handleGoToCart} onNavigateToAdmin={handleGoToAdmin} onNavigateToProfile={handleGoToProfile} />
+          <HomePage 
+            onExploreClick={handleExploreMenu} 
+            onDeliveryClick={handleDeliveryClick} 
+            onTakeawayClick={handleTakeawayClick} 
+            cartItemsCount={cartItems.length} 
+            onNavigateToCart={handleGoToCart} 
+            onNavigateToAdmin={handleGoToAdmin} 
+            onNavigateToProfile={handleGoToProfile}
+            onLoginClick={() => currentUser ? handleGoToProfile() : setIsLoginModalOpen(true)}
+            isAdmin={isAdmin}
+          />
         ) : currentPage === 'menu' ? (
           <Categories onBackHome={handleBackToHome} onAddToCart={handleAddToCart} cartItemsCount={cartItems.length} onNavigateToCart={handleGoToCart} targetItemName={targetItemName} clearTargetItem={() => setTargetItemName(null)} />
         ) : currentPage === 'cart' ? (
-          <CartPage cartItems={cartItems} onBackHome={handleBackToHome} onContinueShopping={handleContinueShopping} onClearCart={handleClearCart} onNavigateToProfile={handleGoToProfile} />
+          <CartPage cartItems={cartItems} orderType={orderType} onBackHome={handleBackToHome} onContinueShopping={handleContinueShopping} onClearCart={handleClearCart} onNavigateToProfile={handleGoToProfile} />
         ) : currentPage === 'admin' ? (
           <div className="w-full min-h-screen">
             <button 

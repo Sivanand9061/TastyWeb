@@ -95,8 +95,15 @@ function CartItemCard({ item, onRemove, onQuantityChange }: { item: CartItem & {
   );
 }
 
-function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; onClose: () => void; onSubmit: (data: OrderFormData) => void; cartTotal: string }) {
+function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: OrderFormData) => void;
+  cartTotal: string;
+}) {
   const { currentUser } = useAuth();
+  const [orderType, setOrderType] = useState<'delivery' | 'takeaway' | null>(null);
+  const isTakeaway = orderType === 'takeaway';
   
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(20);
   const [distanceError, setDistanceError] = useState("");
@@ -143,6 +150,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
       setErrors({});
       setDistanceError("");
       setIsSubmitting(false);
+      setOrderType(null); // Reset order type each time form opens
     }
   }, [isOpen, currentUser]);
 
@@ -161,6 +169,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
   };
 
   const validateAddress = (address: string): string => {
+    if (isTakeaway) return '';
     if (!address.trim()) return "Address is required";
     if (address.trim().length < 5) return "Address must be at least 5 characters";
     if (!formData.lat || !formData.lng) return "Please select a specific address from the dropdown suggestions";
@@ -192,8 +201,10 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
     const emailError = validateEmail(formData.email);
     if (emailError) newErrors.email = emailError;
 
-    const addressError = validateAddress(formData.address);
-    if (addressError) newErrors.address = addressError;
+    if (!isTakeaway) {
+      const addressError = validateAddress(formData.address);
+      if (addressError) newErrors.address = addressError;
+    }
 
     const phoneError = validatePhone(formData.phone);
     if (phoneError) newErrors.phone = phoneError;
@@ -236,7 +247,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
     if (isSubmitting) return;
 
     if (validateForm()) {
-      if (formData.lat && formData.lng) {
+      if (!isTakeaway && formData.lat && formData.lng) {
         const distance = calculateDistance(RESTAURANT_LAT, RESTAURANT_LNG, formData.lat, formData.lng);
         if (distance > deliveryRadiusKm) {
           setDistanceError(`Sorry, this location is ${distance.toFixed(1)}km away. We only deliver within ${deliveryRadiusKm}km of our restaurant.`);
@@ -282,12 +293,54 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] z-[70] max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex justify-center pt-4 pb-2">
-              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
-            </div>
+            <div className="flex justify-center pt-4 pb-2"><div className="w-12 h-1 bg-gray-300 rounded-full" /></div>
 
             <div className="px-6 pb-8">
-              <h2 className="text-[28px] font-bold text-[#1c1c1a] mb-6">Order Details</h2>
+              {/* ── Step 1: Order Type Selection ── */}
+              {!orderType ? (
+                <div>
+                  <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest mb-2">How would you like this order?</p>
+                  <h2 className="text-[24px] font-black text-[#1c1c1a] mb-6">Choose Order Type</h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setOrderType('delivery')}
+                      className="flex flex-col items-center gap-3 bg-gray-50 border-2 border-gray-200 rounded-[20px] p-6 hover:border-[#f51c27] hover:bg-red-50 transition-all active:scale-95"
+                    >
+                      <span className="text-4xl">🛵</span>
+                      <div className="text-center">
+                        <p className="text-[15px] font-black text-gray-900">Delivery</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">To your door</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setOrderType('takeaway')}
+                      className="flex flex-col items-center gap-3 bg-gray-50 border-2 border-gray-200 rounded-[20px] p-6 hover:border-blue-500 hover:bg-blue-50 transition-all active:scale-95"
+                    >
+                      <span className="text-4xl">📦</span>
+                      <div className="text-center">
+                        <p className="text-[15px] font-black text-gray-900">Takeaway</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">Collect from us</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+              <>
+              {/* Order type badge + change link */}
+              <div className="flex items-center justify-between mb-5">
+                <span className={`text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+                  isTakeaway ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-[#f51c27]'
+                }`}>
+                  {isTakeaway ? '📦 Takeaway' : '🛵 Delivery'}
+                </span>
+                <button
+                  onClick={() => setOrderType(null)}
+                  className="text-[12px] text-gray-400 hover:text-gray-700 underline"
+                >
+                  Change
+                </button>
+              </div>
+              <h2 className="text-[26px] font-bold text-[#1c1c1a] mb-6">Your Details</h2>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Name Field */}
@@ -328,10 +381,11 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
                   {errors.email && <p className="text-[12px] text-[#d90429] mt-1">{errors.email}</p>}
                 </div>
 
-                {/* Address Field */}
+                {/* Address Field - hidden for takeaway */}
+                {!isTakeaway && (
                 <div>
                   <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Delivery Address * <span className="text-[12px] text-[#727272]">(Search precisely)</span></label>
-                  <AddressAutocomplete 
+                  <AddressAutocomplete
                     value={formData.address}
                     onChange={handleAddressChange}
                     error={errors.address}
@@ -342,6 +396,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
                   />
                   {errors.address && <p className="text-[12px] text-[#d90429] mt-1">{errors.address}</p>}
                 </div>
+                )}
 
                 {/* Phone Number Field */}
                 <div>
@@ -401,7 +456,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={isSubmitting || Object.values(errors).some(err => err.length > 0) || !formData.name.trim() || !formData.address.trim() || !!distanceError}
+                  disabled={isSubmitting || Object.values(errors).some(err => err.length > 0) || !formData.name.trim() || (!isTakeaway && !formData.address.trim()) || !!distanceError}
                   className="w-full bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] py-4 text-[18px] font-semibold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
@@ -417,6 +472,8 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: { isOpen: boolean; 
                   )}
                 </button>
               </form>
+              </>
+              )}
             </div>
           </motion.div>
         </>
@@ -576,7 +633,13 @@ function SuccessModal({ isOpen, total, onContinueShopping, onBackHome }: { isOpe
   );
 }
 
-export default function CartPage({ cartItems, onBackHome, onContinueShopping, onClearCart, onNavigateToProfile }: { cartItems: CartItem[]; onBackHome?: () => void; onContinueShopping?: () => void; onClearCart?: () => void; onNavigateToProfile?: () => void; }) {
+export default function CartPage({ cartItems, onBackHome, onContinueShopping, onClearCart, onNavigateToProfile }: {
+  cartItems: CartItem[];
+  onBackHome?: () => void;
+  onContinueShopping?: () => void;
+  onClearCart?: () => void;
+  onNavigateToProfile?: () => void;
+}) {
   const { currentUser, isAdmin } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [items, setItems] = useState(cartItems);
@@ -651,6 +714,21 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
       setSuccessTotal(cartTotal); // Save the total before clearing items
       setIsFormOpen(false);
       setIsSuccessOpen(true);
+
+      // ── Save to localStorage for "Order Again" section ──
+      try {
+        const existing: any[] = JSON.parse(localStorage.getItem('recentOrders') || '[]');
+        const newItems = items.map(item => ({
+          name: item.name,
+          price: parseFloat(item.price.replace('AED ', '')).toFixed(2),
+          image: item.image || null,
+          orderedAt: Date.now(),
+        }));
+        // Merge: put newest first, deduplicate by name, keep max 6
+        const merged = [...newItems, ...existing.filter(e => !newItems.some(n => n.name === e.name))].slice(0, 6);
+        localStorage.setItem('recentOrders', JSON.stringify(merged));
+      } catch { /* ignore storage errors */ }
+
       setItems([]);
       
       // Clear cart from parent component
@@ -782,9 +860,9 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
         )}
       </div>
 
-      <OrderForm 
-        isOpen={isFormOpen} 
-        onClose={() => setIsFormOpen(false)} 
+      <OrderForm
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
         onSubmit={handleOrderSubmit}
         cartTotal={`AED ${cartTotal}`}
       />
