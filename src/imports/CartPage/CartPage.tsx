@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../../app/AuthContext";
-import { User, LogIn, ArrowLeft } from "lucide-react";
+import { User, LogIn, ArrowLeft, Car, ShoppingBag, Utensils } from "lucide-react";
 import LoginSignupModal from "../Auth/LoginSignupModal";
 import { ref, get, update } from "firebase/database";
 import { db } from "../../firebase";
@@ -31,6 +31,7 @@ interface OrderFormData {
   lng?: number;
   phone: string;
   notes: string;
+  tableNumber?: string;
 }
 
 function CartItemCard({ item, onRemove, onQuantityChange }: { item: CartItem & { id: string }; onRemove: () => void; onQuantityChange: (qty: number) => void }) {
@@ -51,7 +52,7 @@ function CartItemCard({ item, onRemove, onQuantityChange }: { item: CartItem & {
             <div className="w-full h-full flex items-center justify-center text-2xl">🍽️</div>
           )}
         </div>
-        
+
         <div className="flex-1">
           <h3 className="text-[18px] font-bold text-[#1c1c1a] mb-0.5">{item.name}</h3>
           {item.nameAr && (
@@ -61,11 +62,11 @@ function CartItemCard({ item, onRemove, onQuantityChange }: { item: CartItem & {
             <p className="text-[12px] font-semibold text-[var(--accent)] mb-1">{item.variant}</p>
           )}
           <p className="text-[12px] text-[#727272] mb-4">{item.description}</p>
-          
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => onQuantityChange(Math.max(1, item.quantity - 1))}
+                onClick={() => onQuantityChange(item.quantity - 1)}
                 className="w-6 h-6 rounded-full border border-[#d1d1d1] flex items-center justify-center text-[14px] hover:bg-[#f0f0f0] transition-colors"
               >
                 −
@@ -78,7 +79,7 @@ function CartItemCard({ item, onRemove, onQuantityChange }: { item: CartItem & {
                 +
               </button>
             </div>
-            
+
             <div className="text-right">
               <p className="text-[16px] font-bold text-[#1caa00] mb-2">AED {total}</p>
               <button
@@ -98,54 +99,55 @@ function CartItemCard({ item, onRemove, onQuantityChange }: { item: CartItem & {
 function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: OrderFormData) => void;
+  onSubmit: (data: OrderFormData & { orderType: string }) => Promise<void>;
   cartTotal: string;
 }) {
   const { currentUser } = useAuth();
-  const [orderType, setOrderType] = useState<'delivery' | 'takeaway' | null>(null);
-  const isTakeaway = orderType === 'takeaway';
-  
-  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(20);
-  const [distanceError, setDistanceError] = useState("");
-
+  const [orderType, setOrderType] = useState<'delivery' | 'takeaway' | 'dinein' | null>(null);
   const [formData, setFormData] = useState<OrderFormData>({
     name: "",
     email: "",
     address: "",
     phone: "",
     notes: "",
+    tableNumber: ""
   });
 
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [distanceError, setDistanceError] = useState("");
+  const deliveryRadiusKm = 10;
+
+  const isTakeaway = orderType === 'takeaway';
+  const isDineIn = orderType === 'dinein';
+  const needsAddress = orderType === 'delivery';
+
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   // Clear form when modal opens, and auto-fill if user logged in
   useEffect(() => {
     if (isOpen) {
-      // Fetch dynamic delivery radius from db
-      get(ref(db, 'settings/deliveryRadiusKm')).then(snap => {
-        if (snap.exists()) setDeliveryRadiusKm(snap.val());
-      });
-
       if (currentUser) {
         get(ref(db, `users/${currentUser.uid}`)).then(snapshot => {
           if (snapshot.exists()) {
             const data = snapshot.val();
-            setFormData({ 
-              name: currentUser.displayName || data.name || "", 
+            setFormData({
+              name: currentUser.displayName || data.name || "",
               email: currentUser.email || "",
-              address: data.address || "", 
+              address: data.address || localStorage.getItem('savedAddress') || "",
               lat: data.lat,
               lng: data.lng,
-              phone: data.phone || "", 
-              notes: "" 
+              phone: data.phone || "",
+              notes: "",
+              tableNumber: ""
             });
           } else {
-             setFormData({ name: currentUser.displayName || "", email: currentUser.email || "", address: "", phone: "", notes: "" });
+            const savedAddr = localStorage.getItem('savedAddress') || "";
+            setFormData({ name: currentUser.displayName || "", email: currentUser.email || "", address: savedAddr, phone: "", notes: "", tableNumber: "" });
           }
         });
       } else {
-        setFormData({ name: "", email: "", address: "", phone: "", notes: "" });
+        const savedAddr = localStorage.getItem('savedAddress') || "";
+        setFormData({ name: "", email: "", address: savedAddr, phone: "", notes: "", tableNumber: "" });
       }
       setErrors({});
       setDistanceError("");
@@ -178,16 +180,22 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
   };
 
   const validateAddress = (address: string): string => {
-    if (isTakeaway) return '';
+    if (!needsAddress) return '';
     if (!address.trim()) return "Address is required";
     if (address.trim().length < 5) return "Address must be at least 5 characters";
     if (!formData.lat || !formData.lng) return "Please select a specific address from the dropdown suggestions";
     return "";
   };
 
+  const validateTable = (table: string | undefined): string => {
+    if (!isDineIn) return '';
+    if (!table || !table.trim()) return "Table Number is required for Dine In";
+    if (!/^[a-zA-Z0-9\s-]+$/.test(table)) return "Invalid table number format";
+    return "";
+  };
+
   const validatePhone = (phone: string): string => {
     if (!phone.trim()) return "Phone number is required";
-    // Only digits, 7-15 characters
     const phoneDigits = phone.replace(/\D/g, "");
     if (!phoneDigits) return "Please enter a phone number";
     if (!/^\d{7,15}$/.test(phoneDigits)) return "Phone must be 7-15 digits";
@@ -210,9 +218,14 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
     const emailError = validateEmail(formData.email);
     if (emailError) newErrors.email = emailError;
 
-    if (!isTakeaway) {
+    if (needsAddress) {
       const addressError = validateAddress(formData.address);
       if (addressError) newErrors.address = addressError;
+    }
+
+    if (isDineIn) {
+      const tableError = validateTable(formData.tableNumber);
+      if (tableError) newErrors.tableNumber = tableError;
     }
 
     const phoneError = validatePhone(formData.phone);
@@ -234,29 +247,27 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
     if (errors.email) setErrors({ ...errors, email: "" });
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, phone: value });
+    if (errors.phone) setErrors({ ...errors, phone: "" });
+  };
+
   const handleAddressChange = (address: string, lat?: number, lng?: number) => {
     setDistanceError('');
     const newErrors = { ...errors };
     delete newErrors.address;
     setErrors(newErrors);
-    
-    setFormData((prev) => ({ ...prev, address, lat, lng }));
-  };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value;
-    // Only allow digits
-    value = value.replace(/\D/g, "");
-    setFormData({ ...formData, phone: value });
-    if (errors.phone) setErrors({ ...errors, phone: "" });
+    setFormData((prev) => ({ ...prev, address, lat, lng }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (isSubmitting || !orderType) return;
 
     if (validateForm()) {
-      if (!isTakeaway && formData.lat && formData.lng) {
+      if (needsAddress && formData.lat && formData.lng) {
         const distance = calculateDistance(RESTAURANT_LAT, RESTAURANT_LNG, formData.lat, formData.lng);
         if (distance > deliveryRadiusKm) {
           setDistanceError(`Sorry, this location is ${distance.toFixed(1)}km away. We only deliver within ${deliveryRadiusKm}km of our restaurant.`);
@@ -267,7 +278,6 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
       setIsSubmitting(true);
       try {
         if (currentUser) {
-          // Save these details as the user's default for next time
           await update(ref(db, `users/${currentUser.uid}`), {
             name: formData.name,
             address: formData.address,
@@ -276,7 +286,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
             phone: formData.phone
           });
         }
-        await onSubmit(formData);
+        await onSubmit({ ...formData, orderType });
       } finally {
         setIsSubmitting(false);
       }
@@ -294,7 +304,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
             onClick={onClose}
             className="fixed inset-0 bg-black/50 z-[60]"
           />
-          
+
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
@@ -305,183 +315,214 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
             <div className="flex justify-center pt-4 pb-2"><div className="w-12 h-1 bg-gray-300 rounded-full" /></div>
 
             <div className="px-6 pb-8">
-              {/* ── Step 1: Order Type Selection ── */}
               {!orderType ? (
                 <div>
                   <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest mb-2">How would you like this order?</p>
                   <h2 className="text-[24px] font-black text-[#1c1c1a] mb-6">Choose Order Type</h2>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-4">
                     <button
                       onClick={() => setOrderType('delivery')}
-                      className="flex flex-col items-center gap-3 bg-gray-50 border-2 border-gray-200 rounded-[20px] p-6 hover:border-[#f51c27] hover:bg-red-50 transition-all active:scale-95"
+                      className="w-full text-left p-5 rounded-2xl border-2 border-[#1caa00] bg-[#1caa00]/10 flex items-center justify-between"
                     >
-                      <span className="text-4xl">🛵</span>
-                      <div className="text-center">
-                        <p className="text-[15px] font-black text-gray-900">Delivery</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">To your door</p>
+                      <div>
+                        <div className="text-[18px] font-bold text-[#1caa00]">Delivery</div>
+                        <div className="text-[13px] text-gray-600 mt-1">Free delivery within {deliveryRadiusKm}km</div>
                       </div>
+                      <Car size={24} className="text-[#1caa00]" />
                     </button>
+
                     <button
                       onClick={() => setOrderType('takeaway')}
-                      className="flex flex-col items-center gap-3 bg-gray-50 border-2 border-gray-200 rounded-[20px] p-6 hover:border-blue-500 hover:bg-blue-50 transition-all active:scale-95"
+                      className="w-full text-left p-5 rounded-2xl border-2 border-[#f51c27] bg-[#f51c27]/10 flex items-center justify-between"
                     >
-                      <span className="text-4xl">📦</span>
-                      <div className="text-center">
-                        <p className="text-[15px] font-black text-gray-900">Takeaway</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">Collect from us</p>
+                      <div>
+                        <div className="text-[18px] font-bold text-[#f51c27]">Takeaway</div>
+                        <div className="text-[13px] text-gray-600 mt-1">Pick up your food at our restaurant</div>
                       </div>
+                      <ShoppingBag size={24} className="text-[#f51c27]" />
+                    </button>
+
+                    <button
+                      onClick={() => setOrderType('dinein')}
+                      className="w-full text-left p-5 rounded-2xl border-2 border-[#f39c12] bg-[#f39c12]/10 flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="text-[18px] font-bold text-[#f39c12]">Dine In</div>
+                        <div className="text-[13px] text-gray-600 mt-1">Eat at our restaurant</div>
+                      </div>
+                      <Utensils size={24} className="text-[#f39c12]" />
                     </button>
                   </div>
                 </div>
               ) : (
-              <>
-              {/* Order type badge + change link */}
-              <div className="flex items-center justify-between mb-5">
-                <span className={`text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
-                  isTakeaway ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-[#f51c27]'
-                }`}>
-                  {isTakeaway ? '📦 Takeaway' : '🛵 Delivery'}
-                </span>
-                <button
-                  onClick={() => setOrderType(null)}
-                  className="text-[12px] text-gray-400 hover:text-gray-700 underline"
-                >
-                  Change
-                </button>
-              </div>
-              <h2 className="text-[26px] font-bold text-[#1c1c1a] mb-6">Your Details</h2>
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Name Field */}
-                <div>
-                  <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Full Name * <span className="text-[12px] text-[#727272]">(Letters only)</span></label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={handleNameChange}
-                    onBlur={() => {
-                      const error = validateName(formData.name);
-                      if (error) setErrors({ ...errors, name: error });
-                    }}
-                    placeholder="John Doe"
-                    className={`w-full px-4 py-3 border rounded-[22px] text-[14px] placeholder:text-[#ccc] focus:outline-none transition-colors ${
-                      errors.name ? "border-[#d90429] focus:border-[#d90429]" : "border-[#d1d1d1] focus:border-[#f51c27]"
-                    }`}
-                  />
-                  {errors.name && <p className="text-[12px] text-[#d90429] mt-1">{errors.name}</p>}
-                </div>
-
-                {/* Email Field */}
-                <div>
-                  <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Email Address <span className="text-[12px] text-[#727272]">(Optional)</span></label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={handleEmailChange}
-                    onBlur={() => {
-                      const error = validateEmail(formData.email);
-                      if (error) setErrors({ ...errors, email: error });
-                    }}
-                    placeholder="you@email.com"
-                    className={`w-full px-4 py-3 border rounded-[22px] text-[14px] placeholder:text-[#ccc] focus:outline-none transition-colors ${
-                      errors.email ? "border-[#d90429] focus:border-[#d90429]" : "border-[#d1d1d1] focus:border-[#f51c27]"
-                    }`}
-                  />
-                  {errors.email && <p className="text-[12px] text-[#d90429] mt-1">{errors.email}</p>}
-                </div>
-
-                {/* Address Field - hidden for takeaway */}
-                {!isTakeaway && (
-                <div>
-                  <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Delivery Address * <span className="text-[12px] text-[#727272]">(Search precisely)</span></label>
-                  <AddressAutocomplete
-                    value={formData.address}
-                    onChange={handleAddressChange}
-                    error={errors.address}
-                    onBlur={() => {
-                      const error = validateAddress(formData.address);
-                      if (error) setErrors((prev) => ({ ...prev, address: error }));
-                    }}
-                  />
-                  {errors.address && <p className="text-[12px] text-[#d90429] mt-1">{errors.address}</p>}
-                </div>
-                )}
-
-                {/* Phone Number Field */}
-                <div>
-                  <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Phone Number * <span className="text-[12px] text-[#727272]">(Numbers only, 7-15 digits)</span></label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handlePhoneChange}
-                    onBlur={() => {
-                      const error = validatePhone(formData.phone);
-                      if (error) setErrors({ ...errors, phone: error });
-                    }}
-                    placeholder="5012345678"
-                    className={`w-full px-4 py-3 border rounded-[22px] text-[14px] placeholder:text-[#ccc] focus:outline-none transition-colors ${
-                      errors.phone ? "border-[#d90429] focus:border-[#d90429]" : "border-[#d1d1d1] focus:border-[#f51c27]"
-                    }`}
-                  />
-                  {errors.phone && <p className="text-[12px] text-[#d90429] mt-1">{errors.phone}</p>}
-                </div>
-
-                {/* Additional Notes Field */}
-                <div>
-                  <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Additional Notes <span className="text-[12px] text-[#727272]">(Optional)</span></label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setFormData({ ...formData, notes: value });
-                      if (errors.notes) setErrors({ ...errors, notes: "" });
-                    }}
-                    onBlur={() => {
-                      const error = validateNotes(formData.notes);
-                      if (error) setErrors({ ...errors, notes: error });
-                    }}
-                    placeholder="Any special requests (letters and numbers only)..."
-                    rows={3}
-                    className={`w-full px-4 py-3 border rounded-[22px] text-[14px] placeholder:text-[#ccc] focus:outline-none resize-none transition-colors ${
-                      errors.notes ? "border-[#d90429] focus:border-[#d90429]" : "border-[#d1d1d1] focus:border-[#f51c27]"
-                    }`}
-                  />
-                  {errors.notes && <p className="text-[12px] text-[#d90429] mt-1">{errors.notes}</p>}
-                </div>
-
-                {/* Order Total / Error */}
-                <div className="bg-[#fbf4e8] rounded-[22px] p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[16px] font-medium text-[#1c1c1a]">Total Amount:</span>
-                    <span className="text-[24px] font-bold text-[#1caa00]">{cartTotal}</span>
+                <>
+                  <div className="flex items-center justify-between mb-5">
+                    <span className={`text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${isTakeaway ? 'bg-blue-50 text-blue-600' : isDineIn ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-[#f51c27]'
+                      }`}>
+                      {isTakeaway ? '📦 Takeaway' : isDineIn ? '🍽️ Dine In' : '🛵 Delivery'}
+                    </span>
+                    <button
+                      onClick={() => setOrderType(null)}
+                      className="text-[12px] text-gray-400 hover:text-gray-700 underline"
+                    >
+                      Change
+                    </button>
                   </div>
-                  {distanceError && (
-                    <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl mt-2 font-medium">
-                      {distanceError}
-                    </div>
-                  )}
-                </div>
+                  <h2 className="text-[26px] font-bold text-[#1c1c1a] mb-6">Your Details</h2>
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting || Object.values(errors).some(err => err.length > 0) || !formData.name.trim() || (!isTakeaway && !formData.address.trim()) || !!distanceError}
-                  className="w-full bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] py-4 text-[18px] font-semibold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <svg className="w-5 h-5 animate-spin text-[#f51c27]" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Processing...
-                    </>
-                  ) : (
-                    "Confirm Order"
-                  )}
-                </button>
-              </form>
-              </>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Name Field */}
+                    <div>
+                      <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Full Name * <span className="text-[12px] text-[#727272]">(Letters only)</span></label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => {
+                          setFormData({ ...formData, name: e.target.value });
+                          if (errors.name) setErrors({ ...errors, name: '' });
+                        }}
+                        onBlur={() => {
+                          const error = validateName(formData.name);
+                          if (error) setErrors({ ...errors, name: error });
+                        }}
+                        placeholder="John Doe"
+                        className={`w-full px-4 py-3 border rounded-[22px] text-[14px] placeholder:text-[#ccc] focus:outline-none transition-colors ${errors.name ? "border-[#d90429] focus:border-[#d90429]" : "border-[#d1d1d1] focus:border-[#f51c27]"
+                          }`}
+                      />
+                      {errors.name && <p className="text-[12px] text-[#d90429] mt-1">{errors.name}</p>}
+                    </div>
+
+                    {/* Email Field */}
+                    <div>
+                      <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Email Address <span className="text-[12px] text-[#727272]">(Optional)</span></label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={handleEmailChange}
+                        onBlur={() => {
+                          const error = validateEmail(formData.email);
+                          if (error) setErrors({ ...errors, email: error });
+                        }}
+                        placeholder="you@email.com"
+                        className={`w-full px-4 py-3 border rounded-[22px] text-[14px] placeholder:text-[#ccc] focus:outline-none transition-colors ${errors.email ? "border-[#d90429] focus:border-[#d90429]" : "border-[#d1d1d1] focus:border-[#f51c27]"
+                          }`}
+                      />
+                      {errors.email && <p className="text-[12px] text-[#d90429] mt-1">{errors.email}</p>}
+                    </div>
+
+                    {/* Address Field - hidden for takeaway/dine-in */}
+                    {needsAddress && (
+                      <div>
+                        <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Delivery Address * <span className="text-[12px] text-[#727272]">(Search precisely)</span></label>
+                        <AddressAutocomplete
+                          value={formData.address}
+                          onChange={handleAddressChange}
+                          error={errors.address}
+                          onBlur={() => {
+                            const error = validateAddress(formData.address);
+                            if (error) setErrors((prev) => ({ ...prev, address: error }));
+                          }}
+                        />
+                        {errors.address && <p className="text-[12px] text-[#d90429] mt-1">{errors.address}</p>}
+                      </div>
+                    )}
+
+                    {/* Table Number Field - Only for Dine-in */}
+                    {isDineIn && (
+                      <div>
+                        <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Table Number *</label>
+                        <input
+                          type="text"
+                          value={formData.tableNumber || ''}
+                          onChange={(e) => {
+                            setFormData({ ...formData, tableNumber: e.target.value });
+                            if (errors.tableNumber) setErrors({ ...errors, tableNumber: '' });
+                          }}
+                          onBlur={() => {
+                            const error = validateTable(formData.tableNumber);
+                            if (error) setErrors({ ...errors, tableNumber: error });
+                          }}
+                          placeholder="E.g. Table 12, Window Seat..."
+                          className={`w-full px-4 py-3 border rounded-[22px] text-[14px] placeholder:text-[#ccc] focus:outline-none transition-colors ${errors.tableNumber ? "border-[#d90429] focus:border-[#d90429]" : "border-[#d1d1d1] focus:border-[#f51c27]"
+                            }`}
+                        />
+                        {errors.tableNumber && <p className="text-[12px] text-[#d90429] mt-1">{errors.tableNumber}</p>}
+                      </div>
+                    )}
+
+                    {/* Phone Number Field */}
+                    <div>
+                      <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Phone Number * <span className="text-[12px] text-[#727272]">(Numbers only, 7-15 digits)</span></label>
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={handlePhoneChange}
+                        onBlur={() => {
+                          const error = validatePhone(formData.phone);
+                          if (error) setErrors({ ...errors, phone: error });
+                        }}
+                        placeholder="5012345678"
+                        className={`w-full px-4 py-3 border rounded-[22px] text-[14px] placeholder:text-[#ccc] focus:outline-none transition-colors ${errors.phone ? "border-[#d90429] focus:border-[#d90429]" : "border-[#d1d1d1] focus:border-[#f51c27]"
+                          }`}
+                      />
+                      {errors.phone && <p className="text-[12px] text-[#d90429] mt-1">{errors.phone}</p>}
+                    </div>
+
+                    {/* Additional Notes Field */}
+                    <div>
+                      <label className="text-[14px] font-medium text-[#1c1c1a] mb-2 block">Additional Notes <span className="text-[12px] text-[#727272]">(Optional)</span></label>
+                      <textarea
+                        value={formData.notes}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setFormData({ ...formData, notes: value });
+                          if (errors.notes) setErrors({ ...errors, notes: "" });
+                        }}
+                        onBlur={() => {
+                          const error = validateNotes(formData.notes);
+                          if (error) setErrors({ ...errors, notes: error });
+                        }}
+                        placeholder="Any special requests (letters and numbers only)..."
+                        rows={3}
+                        className={`w-full px-4 py-3 border rounded-[22px] text-[14px] placeholder:text-[#ccc] focus:outline-none resize-none transition-colors ${errors.notes ? "border-[#d90429] focus:border-[#d90429]" : "border-[#d1d1d1] focus:border-[#f51c27]"
+                          }`}
+                      />
+                      {errors.notes && <p className="text-[12px] text-[#d90429] mt-1">{errors.notes}</p>}
+                    </div>
+
+                    {/* Order Total / Error */}
+                    <div className="bg-[#fbf4e8] rounded-[22px] p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[16px] font-medium text-[#1c1c1a]">Total Amount:</span>
+                        <span className="text-[24px] font-bold text-[#1caa00]">{cartTotal}</span>
+                      </div>
+                      {distanceError && (
+                        <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl mt-2 font-medium">
+                          {distanceError}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || Object.values(errors).some(err => err.length > 0) || !formData.name.trim() || (!isTakeaway && !formData.address.trim()) || !!distanceError}
+                      className="w-full bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] py-4 text-[18px] font-semibold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <svg className="w-5 h-5 animate-spin text-[#f51c27]" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Processing...
+                        </>
+                      ) : (
+                        "Confirm Order"
+                      )}
+                    </button>
+                  </form>
+                </>
               )}
             </div>
           </motion.div>
@@ -579,7 +620,7 @@ function SuccessModal({ isOpen, total, onContinueShopping, onBackHome }: { isOpe
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 z-[60]"
           />
-          
+
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -604,7 +645,7 @@ function SuccessModal({ isOpen, total, onContinueShopping, onBackHome }: { isOpe
 
               {/* Success Message */}
               <h2 className="text-[32px] font-black text-[#1c1c1a] mb-3">Order Confirmed!</h2>
-              
+
               <p className="text-[16px] text-[#727272] mb-8 leading-relaxed">
                 Your order has been confirmed. We will deliver it soon.
               </p>
@@ -642,8 +683,9 @@ function SuccessModal({ isOpen, total, onContinueShopping, onBackHome }: { isOpe
   );
 }
 
-export default function CartPage({ cartItems, onBackHome, onContinueShopping, onClearCart, onNavigateToProfile }: {
+export default function CartPage({ cartItems, onUpdateCartItems, onBackHome, onContinueShopping, onClearCart, onNavigateToProfile }: {
   cartItems: CartItem[];
+  onUpdateCartItems?: (items: CartItem[]) => void;
   onBackHome?: () => void;
   onContinueShopping?: () => void;
   onClearCart?: () => void;
@@ -651,7 +693,6 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
 }) {
   const { currentUser, isAdmin } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [items, setItems] = useState(cartItems);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [successTotal, setSuccessTotal] = useState("0");
@@ -665,35 +706,48 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
     }
   }, [currentUser, pendingCheckout]);
 
-  const cartTotal = items
+  const cartTotal = cartItems
     .reduce((sum, item) => sum + parseFloat(item.price.replace("AED ", "")) * item.quantity, 0)
     .toFixed(2);
 
   const handleRemoveItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+    if (onUpdateCartItems) {
+      onUpdateCartItems(cartItems.filter((_, i) => i !== index));
+    }
   };
 
   const handleQuantityChange = (index: number, quantity: number) => {
-    const newItems = [...items];
-    newItems[index].quantity = quantity;
-    setItems(newItems);
+    if (quantity <= 0) {
+      handleRemoveItem(index);
+      return;
+    }
+    if (onUpdateCartItems) {
+      const newItems = [...cartItems];
+      newItems[index].quantity = quantity;
+      onUpdateCartItems(newItems);
+    }
   };
 
-  const handleOrderSubmit = async (formData: OrderFormData) => {
+  const handleOrderSubmit = async (formData: OrderFormData & { orderType: string }) => {
     try {
       const isLocalhost = window.location.hostname === 'localhost';
       const defaultApi = isLocalhost ? 'http://localhost:5000' : `http://${window.location.hostname}:5000`;
       const apiUrl = import.meta.env.VITE_API_URL || defaultApi;
-      
+
+      const needsAddress = formData.orderType === 'delivery';
+      const isDineIn = formData.orderType === 'dinein';
+
       const orderData = {
         customerName: formData.name,
         email: formData.email,
-        address: formData.address,
-        lat: formData.lat,
-        lng: formData.lng,
+        address: needsAddress ? formData.address : "",
+        lat: needsAddress ? formData.lat : null,
+        lng: needsAddress ? formData.lng : null,
+        tableNumber: isDineIn ? formData.tableNumber : null,
         phone: formData.phone,
         notes: formData.notes,
-        items: items.map(item => ({
+        orderType: formData.orderType || "delivery",
+        items: cartItems.map(item => ({
           name: item.name,
           description: item.description,
           price: item.price,
@@ -719,7 +773,7 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
 
       const result = await response.json();
       console.log("✅ Order placed successfully:", result);
-      
+
       setSuccessTotal(cartTotal); // Save the total before clearing items
       setIsFormOpen(false);
       setIsSuccessOpen(true);
@@ -738,8 +792,11 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
         localStorage.setItem('recentOrders', JSON.stringify(merged));
       } catch { /* ignore storage errors */ }
 
-      setItems([]);
-      
+      // Note: we update the global state instead
+      if (onUpdateCartItems) {
+        onUpdateCartItems([]);
+      }
+
       // Clear cart from parent component
       if (onClearCart) {
         onClearCart();
@@ -759,8 +816,8 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
       {/* Header */}
       <div className="relative bg-[#fbf4e8] border-b border-[#e5dfd5]">
         <div className="max-w-2xl mx-auto px-4 h-[70px] flex items-center">
-          <button 
-            onClick={onBackHome} 
+          <button
+            onClick={onBackHome}
             className="p-2 -ml-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft size={24} />
@@ -770,126 +827,126 @@ export default function CartPage({ cartItems, onBackHome, onContinueShopping, on
       </div>
 
       <div className="w-full max-w-[1280px] flex flex-col relative z-10 px-2 lg:px-4">
-      
-      {!currentUser && (
-        <div className="mx-4 mt-2 mb-4 bg-white p-4 rounded-2xl flex items-center justify-between border border-[#e0e0e0] shadow-sm max-w-2xl sm:mx-auto w-[calc(100%-2rem)]">
-          <div>
-            <h3 className="text-[14px] font-bold text-gray-900">Want faster checkout?</h3>
-            <p className="text-[12px] text-gray-500">Log in to safely save your address and phone.</p>
-          </div>
-          <button 
-            onClick={() => setIsLoginModalOpen(true)}
-            className="px-4 py-2 bg-gray-900 text-white text-[12px] font-semibold rounded-xl hover:bg-gray-800 transition-colors"
-          >
-            Log In
-          </button>
-        </div>
-      )}
 
-      <div className="flex-1 px-4 max-w-2xl mx-auto w-full py-6">
-        <h1 className="text-[40px] font-black text-[#1c1c1a] mb-8">Your Cart</h1>
-
-        {items.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
-          >
-            <p className="text-[20px] text-[#727272] mb-6">Your cart is empty</p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onContinueShopping}
-              className="bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] px-8 py-3 text-[16px] font-bold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all"
-            >
-              Continue Shopping
-            </motion.button>
-          </motion.div>
-        ) : (
-          <>
-            <div className="mb-8">
-              {items.map((item, index) => (
-                <CartItemCard
-                  key={index}
-                  item={{ ...item, id: index.toString() }}
-                  onRemove={() => handleRemoveItem(index)}
-                  onQuantityChange={(qty) => handleQuantityChange(index, qty)}
-                />
-              ))}
+        {!currentUser && (
+          <div className="mx-4 mt-2 mb-4 bg-white p-4 rounded-2xl flex items-center justify-between border border-[#e0e0e0] shadow-sm max-w-2xl sm:mx-auto w-[calc(100%-2rem)]">
+            <div>
+              <h3 className="text-[14px] font-bold text-gray-900">Want faster checkout?</h3>
+              <p className="text-[12px] text-gray-500">Log in to safely save your address and phone.</p>
             </div>
-
-            {/* Order Summary */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-[22px] p-6 mb-8 border border-[#e0e0e0] shadow-sm"
+            <button
+              onClick={() => setIsLoginModalOpen(true)}
+              className="px-4 py-2 bg-gray-900 text-white text-[12px] font-semibold rounded-xl hover:bg-gray-800 transition-colors"
             >
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between text-[14px]">
-                  <span className="text-[#727272]">Subtotal</span>
-                  <span className="text-[#1c1c1a] font-medium">AED {cartTotal}</span>
-                </div>
-                <div className="flex justify-between text-[14px]">
-                  <span className="text-[#727272]">Delivery Fee</span>
-                  <span className="text-[#1caa00] font-medium">Free</span>
-                </div>
-              </div>
-              <div className="border-t border-[#e0e0e0] pt-4 flex justify-between">
-                <span className="text-[18px] font-bold text-[#1c1c1a]">Total</span>
-                <span className="text-[24px] font-bold text-[#1caa00]">AED {cartTotal}</span>
-              </div>
-            </motion.div>
-
-            {/* Place Order Button */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (!currentUser || !currentUser.phoneNumber) {
-                  setPendingCheckout(true);
-                  setIsLoginModalOpen(true);
-                } else {
-                  setIsFormOpen(true);
-                }
-              }}
-              className="w-full bg-[#f51c27] shadow-lg shadow-red-500/20 rounded-[35px] py-4 text-[18px] font-black text-white hover:bg-[#d90429] transition-all mb-4"
-            >
-              Place Order
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onContinueShopping}
-              className="w-full border-2 border-[#d1d1d1] rounded-[35px] py-4 text-[18px] font-bold text-[#727272] hover:border-[#f51c27] transition-colors"
-            >
-              Continue Shopping
-            </motion.button>
-          </>
+              Log In
+            </button>
+          </div>
         )}
-      </div>
 
-      <OrderForm
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSubmit={handleOrderSubmit}
-        cartTotal={`AED ${cartTotal}`}
-      />
+        <div className="flex-1 px-4 max-w-2xl mx-auto w-full py-6">
+          <h1 className="text-[40px] font-black text-[#1c1c1a] mb-8">Your Cart</h1>
 
-      <SuccessModal 
-        isOpen={isSuccessOpen}
-        total={`AED ${successTotal}`}
-        onContinueShopping={() => {
-          setIsSuccessOpen(false);
-          onContinueShopping?.();
-        }}
-        onBackHome={() => {
-          setIsSuccessOpen(false);
-          onBackHome?.();
-        }}
-      />
+          {cartItems.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-20"
+            >
+              <p className="text-[20px] text-[#727272] mb-6">Your cart is empty</p>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onContinueShopping}
+                className="bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] px-8 py-3 text-[16px] font-bold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all"
+              >
+                Continue Shopping
+              </motion.button>
+            </motion.div>
+          ) : (
+            <>
+              <div className="mb-8">
+                {cartItems.map((item, index) => (
+                  <CartItemCard
+                    key={index}
+                    item={{ ...item, id: index.toString() }}
+                    onRemove={() => handleRemoveItem(index)}
+                    onQuantityChange={(qty) => handleQuantityChange(index, qty)}
+                  />
+                ))}
+              </div>
 
-      <LoginSignupModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+              {/* Order Summary */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-[22px] p-6 mb-8 border border-[#e0e0e0] shadow-sm"
+              >
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between text-[14px]">
+                    <span className="text-[#727272]">Subtotal</span>
+                    <span className="text-[#1c1c1a] font-medium">AED {cartTotal}</span>
+                  </div>
+                  <div className="flex justify-between text-[14px]">
+                    <span className="text-[#727272]">Delivery Fee</span>
+                    <span className="text-[#1caa00] font-medium">Free</span>
+                  </div>
+                </div>
+                <div className="border-t border-[#e0e0e0] pt-4 flex justify-between">
+                  <span className="text-[18px] font-bold text-[#1c1c1a]">Total</span>
+                  <span className="text-[24px] font-bold text-[#1caa00]">AED {cartTotal}</span>
+                </div>
+              </motion.div>
+
+              {/* Place Order Button */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  if (!currentUser || !currentUser.phoneNumber) {
+                    setPendingCheckout(true);
+                    setIsLoginModalOpen(true);
+                  } else {
+                    setIsFormOpen(true);
+                  }
+                }}
+                className="w-full bg-[#f51c27] shadow-lg shadow-red-500/20 rounded-[35px] py-4 text-[18px] font-black text-white hover:bg-[#d90429] transition-all mb-4"
+              >
+                Place Order
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onContinueShopping}
+                className="w-full border-2 border-[#d1d1d1] rounded-[35px] py-4 text-[18px] font-bold text-[#727272] hover:border-[#f51c27] transition-colors"
+              >
+                Continue Shopping
+              </motion.button>
+            </>
+          )}
+        </div>
+
+        <OrderForm
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSubmit={handleOrderSubmit}
+          cartTotal={`AED ${cartTotal}`}
+        />
+
+        <SuccessModal
+          isOpen={isSuccessOpen}
+          total={`AED ${successTotal}`}
+          onContinueShopping={() => {
+            setIsSuccessOpen(false);
+            onContinueShopping?.();
+          }}
+          onBackHome={() => {
+            setIsSuccessOpen(false);
+            onBackHome?.();
+          }}
+        />
+
+        <LoginSignupModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
 
       </div>
     </div>

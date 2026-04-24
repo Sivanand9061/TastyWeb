@@ -24,6 +24,8 @@ interface Order {
   address: string;
   notes?: string;
   createdAt: string;
+  orderType?: string;
+  tableNumber?: string;
 }
 
 // Removed external audio assets. Using Web Audio API synthesizer instead.
@@ -34,6 +36,7 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
   const [loading, setLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [activeTab, setActiveTab] = useState<'pending' | 'preparing' | 'onWay'>('pending');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'delivery' | 'takeaway' | 'dinein'>('all');
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetConfirmText, setResetConfirmText] = useState('');
   const [resetting, setResetting] = useState(false);
@@ -192,9 +195,12 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
     </div>
   );
 
-  const pendingOrders = orders.filter(o => o.status === 'Pending');
-  const preparingOrders = orders.filter(o => o.status === 'Preparing');
-  const onWayOrders = orders.filter(o => o.status === 'On Way');
+  const onWayOrders = orders.filter(o => o.status === 'On Way' && (typeFilter === 'all' || o.orderType === typeFilter));
+  const preparingOrders = orders.filter(o => o.status === 'Preparing' && (typeFilter === 'all' || o.orderType === typeFilter));
+  const pendingOrders = orders.filter(o => o.status === 'Pending' && (typeFilter === 'all' || o.orderType === typeFilter));
+
+  const getBadgesCount = (type: string) => orders.filter(o => o.status === 'Pending' && (type === 'all' || o.orderType === type)).length;
+
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col font-sans">
       {/* Top Navigation */}
@@ -338,6 +344,34 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
           </div>
         )}
       </AnimatePresence>
+
+      {/* Type Filter Navigation */}
+      <div className="bg-gray-900 border-b border-gray-700 px-6 py-3 flex gap-3 overflow-x-auto">
+        <button
+          onClick={() => setTypeFilter('all')}
+          className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors ${typeFilter === 'all' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-800'}`}
+        >
+          All Orders {getBadgesCount('all') > 0 && <span className="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs">{getBadgesCount('all')}</span>}
+        </button>
+        <button
+          onClick={() => setTypeFilter('delivery')}
+          className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors ${typeFilter === 'delivery' ? 'bg-[#1caa00]/20 text-[#1caa00] border border-[#1caa00]/30' : 'text-gray-400 hover:bg-gray-800'}`}
+        >
+          🛵 Delivery {getBadgesCount('delivery') > 0 && <span className="bg-[#1caa00] text-white px-2 py-0.5 rounded-full text-xs">{getBadgesCount('delivery')}</span>}
+        </button>
+        <button
+          onClick={() => setTypeFilter('takeaway')}
+          className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors ${typeFilter === 'takeaway' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'text-gray-400 hover:bg-gray-800'}`}
+        >
+          📦 Takeaway {getBadgesCount('takeaway') > 0 && <span className="bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs">{getBadgesCount('takeaway')}</span>}
+        </button>
+        <button
+          onClick={() => setTypeFilter('dinein')}
+          className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors ${typeFilter === 'dinein' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'text-gray-400 hover:bg-gray-800'}`}
+        >
+          🍽️ Dine In {getBadgesCount('dinein') > 0 && <span className="bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs">{getBadgesCount('dinein')}</span>}
+        </button>
+      </div>
 
       {/* Mobile Tab Navigation */}
       <div className="xl:hidden bg-gray-800 border-b border-gray-700 flex overflow-x-auto">
@@ -507,8 +541,17 @@ function OrderCard({ order, actionText, onAction, color }: { order: Order, actio
     >
       <div className="flex justify-between items-start">
         <div>
-          <span className="text-gray-400 text-sm font-bold">#{order.orderNumber}</span>
-          <h3 className="text-lg font-black text-white mt-1">{order.customerName}</h3>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-gray-400 text-sm font-bold">#{order.orderNumber}</span>
+            <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full ${
+              order.orderType === 'takeaway' ? 'bg-blue-500/20 text-blue-400' :
+              order.orderType === 'dinein' ? 'bg-orange-500/20 text-orange-400' :
+              'bg-[#1caa00]/20 text-[#1caa00]'
+            }`}>
+              {order.orderType === 'takeaway' ? '📦 Takeaway' : order.orderType === 'dinein' ? '🍽️ Dine In' : '🛵 Delivery'}
+            </span>
+          </div>
+          <h3 className="text-lg font-black text-white">{order.customerName}</h3>
         </div>
         <div className="text-right">
           <span className={`text-xl font-black ${timeDiff > 15 && color === 'yellow' ? 'text-red-500 animate-pulse' : 'text-gray-300'}`}>
@@ -530,7 +573,18 @@ function OrderCard({ order, actionText, onAction, color }: { order: Order, actio
           <span className="text-gray-400 font-medium">Phone:</span> 
           <span className="text-green-400 font-bold text-[16px] tracking-wider font-mono">{order.phone || "Not Provided"}</span>
         </div>
-        <p className="flex justify-between pt-1"><span className="text-gray-500">Address:</span> <span className="text-gray-300 text-right w-2/3 truncate">{order.address}</span></p>
+        {order.orderType === 'delivery' && (
+          <p className="flex justify-between pt-1"><span className="text-gray-500">Address:</span> <span className="text-gray-300 text-right w-2/3 truncate">{order.address}</span></p>
+        )}
+        {order.orderType === 'takeaway' && (
+          <p className="flex justify-between pt-1"><span className="text-gray-500">Pickup:</span> <span className="text-gray-300 font-bold">Takeaway / Collection</span></p>
+        )}
+        {order.orderType === 'dinein' && (
+          <div className="flex justify-between items-center bg-orange-500/10 p-2 mt-1 rounded-lg border border-orange-500/20">
+            <span className="text-orange-400 font-medium">Table Number:</span> 
+            <span className="text-orange-400 font-black text-[18px] tracking-wider">{order.tableNumber || "N/A"}</span>
+          </div>
+        )}
         {order.notes && <p className="text-yellow-200/80 italic mt-2 text-xs border-t border-gray-700 pt-2">Note: {order.notes}</p>}
       </div>
 

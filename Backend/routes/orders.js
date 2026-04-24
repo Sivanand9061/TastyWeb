@@ -41,16 +41,24 @@ const { orderLimiter } = require('../middleware/rateLimiter');
 // Place new order
 router.post('/', orderLimiter, async (req, res, next) => {
   try {
-    let { customerName, address, lat, lng, phone, email, items, totalAmount, notes, userId } = req.body;
+    let { customerName, address, lat, lng, phone, email, items, totalAmount, notes, userId, orderType, tableNumber } = req.body;
     
     // Validation
-    if (!customerName || !address || !phone || !items || !totalAmount) {
+    if (!customerName || !phone || !items || !totalAmount) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (orderType === 'delivery' && !address) {
+      return res.status(400).json({ error: 'Delivery address is required' });
+    }
+
+    if (orderType === 'dinein' && !tableNumber) {
+      return res.status(400).json({ error: 'Table number is required for Dine-in' });
     }
 
     // Strict Input Length Validation & Basic Sanitization
     customerName = String(customerName).substring(0, 100).replace(/[<>{}]/g, ''); 
-    address = String(address).substring(0, 500).replace(/[<>{}]/g, '');
+    address = address ? String(address).substring(0, 500).replace(/[<>{}]/g, '') : (orderType === 'dinein' ? `Dine In - ${tableNumber}` : 'Takeaway');
     notes = String(notes || '').substring(0, 1000).replace(/[<>{}]/g, '');
     phone = String(phone).substring(0, 20);
     email = String(email || '').substring(0, 100);
@@ -126,7 +134,9 @@ router.post('/', orderLimiter, async (req, res, next) => {
       totalAmount,
       notes: notes || '',
       status: 'Pending',
-      deliveryFee: 10,
+      deliveryFee: orderType === 'delivery' ? 10 : 0,
+      orderType: orderType || 'delivery',
+      tableNumber: tableNumber || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

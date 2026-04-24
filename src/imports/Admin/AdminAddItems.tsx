@@ -164,6 +164,12 @@ export default function AdminAddItems() {
   const [homepageLogoFile, setHomepageLogoFile] = useState<File | null>(null);
   const [homepageHeroPreview, setHomepageHeroPreview] = useState<string | null>(null);
   const [homepageHeroFile, setHomepageHeroFile] = useState<File | null>(null);
+  const [homepageSplashPreview, setHomepageSplashPreview] = useState<string | null>(null);
+  const [homepageSplashFile, setHomepageSplashFile] = useState<File | null>(null);
+  const [homepageFaviconPreview, setHomepageFaviconPreview] = useState<string | null>(null);
+  const [homepageFaviconFile, setHomepageFaviconFile] = useState<File | null>(null);
+  const [homepageOgPreview, setHomepageOgPreview] = useState<string | null>(null);
+  const [homepageOgFile, setHomepageOgFile] = useState<File | null>(null);
   // Per-card file map: key = card index, value = File
   const [crowdFavoriteFiles, setCrowdFavoriteFiles] = useState<Record<number, File>>({});
 
@@ -208,6 +214,9 @@ export default function AdminAddItems() {
           setHomepageSettings({
             logoImage: homeData.logoImage || defaultHomepageSettings.logoImage,
             heroImage: homeData.heroImage || defaultHomepageSettings.heroImage,
+            splashScreenImage: homeData.splashScreenImage || defaultHomepageSettings.splashScreenImage,
+            faviconImage: homeData.faviconImage || defaultHomepageSettings.faviconImage,
+            ogImage: homeData.ogImage || defaultHomepageSettings.ogImage,
             crowdFavorites: crowdFavs,
             aboutHeading: homeData.aboutHeading !== undefined ? homeData.aboutHeading : defaultHomepageSettings.aboutHeading,
             aboutSubheading: homeData.aboutSubheading !== undefined ? homeData.aboutSubheading : defaultHomepageSettings.aboutSubheading,
@@ -278,6 +287,15 @@ export default function AdminAddItems() {
       if (homepageHeroFile) {
         newSettings.heroImage = await uploadToCloudinary(homepageHeroFile);
       }
+      if (homepageSplashFile) {
+        newSettings.splashScreenImage = await uploadToCloudinary(homepageSplashFile);
+      }
+      if (homepageFaviconFile) {
+        newSettings.faviconImage = await uploadToCloudinary(homepageFaviconFile);
+      }
+      if (homepageOgFile) {
+        newSettings.ogImage = await uploadToCloudinary(homepageOgFile);
+      }
       // Upload any staged card images
       for (const [idxStr, file] of Object.entries(crowdFavoriteFiles)) {
         const idx = Number(idxStr);
@@ -293,6 +311,12 @@ export default function AdminAddItems() {
       setHomepageLogoPreview(null);
       setHomepageHeroFile(null);
       setHomepageHeroPreview(null);
+      setHomepageSplashFile(null);
+      setHomepageSplashPreview(null);
+      setHomepageFaviconFile(null);
+      setHomepageFaviconPreview(null);
+      setHomepageOgFile(null);
+      setHomepageOgPreview(null);
       setCrowdFavoriteFiles({});
 
       toast.success("Homepage settings saved!");
@@ -967,6 +991,75 @@ export default function AdminAddItems() {
                     if (e.target.files?.[0]) {
                       setHomepageHeroFile(e.target.files[0]);
                       setHomepageHeroPreview(URL.createObjectURL(e.target.files[0]));
+                    }
+                  }} />
+                </label>
+              </div>
+            </div>
+
+            {/* Splash Screen */}
+            <div>
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Splash Screen Image <span className="text-gray-400 font-normal">(Shown while app loads)</span></label>
+              <div className="flex gap-4 items-center">
+                <div className="w-20 h-20 bg-[var(--bg-primary)] rounded-[12px] border border-[var(--bg-card-border)] overflow-hidden flex items-center justify-center p-2">
+                   {homepageSplashPreview || homepageSettings.splashScreenImage ? (
+                     <img src={homepageSplashPreview || homepageSettings.splashScreenImage} className="max-w-full max-h-full object-contain" alt="Splash preview" />
+                   ) : (
+                     <span className="text-gray-400 text-[10px]">None</span>
+                   )}
+                </div>
+                <label className="bg-gray-100 text-gray-700 px-5 py-2.5 rounded-[12px] font-bold text-[14px] hover:bg-gray-200 cursor-pointer transition-colors shadow-sm border border-gray-200">
+                  Select Splash Image
+                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                    if (e.target.files?.[0]) {
+                      setHomepageSplashFile(e.target.files[0]);
+                      setHomepageSplashPreview(URL.createObjectURL(e.target.files[0]));
+                    }
+                  }} />
+                </label>
+              </div>
+            </div>
+
+            {/* Favicon */}
+            <div>
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">App Icon (Favicon) <span className="text-gray-400 font-normal">(Used when adding to Home Screen & Browser tab)</span></label>
+              <div className="flex gap-4 items-center">
+                <div className="w-16 h-16 bg-[var(--bg-primary)] rounded-full border border-[var(--bg-card-border)] overflow-hidden flex items-center justify-center p-2">
+                   {homepageFaviconPreview || homepageSettings.faviconImage ? (
+                     <img src={homepageFaviconPreview || homepageSettings.faviconImage} className="w-full h-full object-cover" alt="Favicon preview" />
+                   ) : (
+                     <span className="text-gray-400 text-[10px]">None</span>
+                   )}
+                </div>
+                <label className="bg-gray-100 text-gray-700 px-5 py-2.5 rounded-[12px] font-bold text-[14px] hover:bg-gray-200 cursor-pointer transition-colors shadow-sm border border-gray-200">
+                  Select App Icon
+                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                    if (e.target.files?.[0]) {
+                      setHomepageFaviconFile(e.target.files[0]);
+                      setHomepageFaviconPreview(URL.createObjectURL(e.target.files[0]));
+                    }
+                  }} />
+                </label>
+              </div>
+            </div>
+
+            {/* OG Image */}
+            <div>
+              <label className="block text-[15px] font-semibold text-[var(--text-primary)] mb-2">Link Preview Image <span className="text-gray-400 font-normal">(Shown on WhatsApp, iMessage, etc)</span></label>
+              <div className="flex gap-4 items-start flex-col">
+                <div className="w-64 h-36 bg-[var(--bg-primary)] rounded-[12px] border border-[var(--bg-card-border)] overflow-hidden flex items-center justify-center relative shadow-inner">
+                   {homepageOgPreview || homepageSettings.ogImage ? (
+                     <img src={homepageOgPreview || homepageSettings.ogImage} className="w-full h-full object-cover" alt="OG Image preview" />
+                   ) : (
+                     <span className="text-gray-400 text-[12px]">No image</span>
+                   )}
+                </div>
+                <label className="bg-gray-100 text-gray-700 px-5 py-2.5 rounded-[12px] font-bold text-[14px] hover:bg-gray-200 cursor-pointer transition-colors shadow-sm border border-gray-200">
+                  Select Preview Image
+                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                    if (e.target.files?.[0]) {
+                      setHomepageOgFile(e.target.files[0]);
+                      setHomepageOgPreview(URL.createObjectURL(e.target.files[0]));
                     }
                   }} />
                 </label>

@@ -35,8 +35,40 @@ export default function App() {
 
   const { currentUser, isAdmin } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const { settings } = useHomepageSettings();
+  const { settings, loading } = useHomepageSettings();
   const [targetItemName, setTargetItemName] = useState<string | null>(null);
+
+  const [showSplash, setShowSplash] = useState(true);
+
+  // Handle meta tags and splash screen
+  useEffect(() => {
+    if (!loading) {
+      // Manage favicon
+      if (settings.faviconImage) {
+        let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
+        }
+        link.href = settings.faviconImage;
+      }
+
+      // Manage OG Image
+      if (settings.ogImage) {
+        let meta = document.querySelector("meta[property='og:image']") as HTMLMetaElement;
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('property', 'og:image');
+          document.head.appendChild(meta);
+        }
+        meta.content = settings.ogImage;
+      }
+      
+      // Let splash screen stay for a little bit minimum
+      setTimeout(() => setShowSplash(false), 1500);
+    }
+  }, [loading, settings]);
 
   // Persist current page to localStorage
   useEffect(() => {
@@ -115,6 +147,16 @@ export default function App() {
 
   return (
     <div className="size-full bg-white relative pb-20">
+      
+      {/* ── Dynamic Splash Screen ── */}
+      <div 
+        className={`fixed inset-0 z-[99999] bg-white flex items-center justify-center transition-opacity duration-700 ease-in pointer-events-none ${showSplash ? 'opacity-100' : 'opacity-0'}`}
+      >
+        {settings.splashScreenImage && (
+          <img src={settings.splashScreenImage} alt="Loading Tasty Hot..." className="w-[180px] object-contain animate-pulse" />
+        )}
+      </div>
+
       {/* Global White Header for App Shell */}
       {isShellPage && currentPage !== 'home' && (
         <div className="sticky top-0 z-50 bg-[#eaeaec] h-[60px] flex items-center justify-between px-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)]">
@@ -168,7 +210,7 @@ export default function App() {
         ) : currentPage === 'menu' ? (
           <Categories onBackHome={handleBackToHome} onAddToCart={handleAddToCart} cartItemsCount={cartItems.length} onNavigateToCart={handleGoToCart} targetItemName={targetItemName} clearTargetItem={() => setTargetItemName(null)} />
         ) : currentPage === 'cart' ? (
-          <CartPage cartItems={cartItems} orderType={orderType} onBackHome={handleBackToHome} onContinueShopping={handleContinueShopping} onClearCart={handleClearCart} onNavigateToProfile={handleGoToProfile} />
+          <CartPage cartItems={cartItems} onUpdateCartItems={setCartItems} onBackHome={handleBackToHome} onContinueShopping={handleContinueShopping} onClearCart={handleClearCart} onNavigateToProfile={handleGoToProfile} />
         ) : currentPage === 'admin' ? (
           <div className="w-full min-h-screen">
             <button 

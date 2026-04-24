@@ -115,7 +115,22 @@ function AddressModal({
               ))}
 
               {input.length >= 3 && suggestions.length === 0 && !isSearching && (
-                <div className="text-center py-8 text-gray-400 text-[13px]">No results found. Try a different search.</div>
+                <div className="text-center pt-8 pb-4 text-gray-400 text-[13px]">No maps results found.</div>
+              )}
+
+              {input.length >= 3 && (
+                <button
+                  onClick={() => { onSelect(input); onClose(); }}
+                  className="w-full flex items-center gap-3 p-3 mt-2 rounded-[12px] bg-red-50 hover:bg-red-100 transition-colors text-left border border-red-100"
+                >
+                  <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                    <MapPin size={16} className="text-[#f51c27]" />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#f51c27] leading-snug line-clamp-1">Use exactly as typed:</p>
+                    <p className="text-[12px] font-bold text-gray-900 leading-snug line-clamp-1">"{input}"</p>
+                  </div>
+                </button>
               )}
             </div>
           </motion.div>
@@ -152,7 +167,9 @@ export default function HomePage({
   const [rawMenuItems, setRawMenuItems] = useState<any[]>([]);
   const [categorySchedules, setCategorySchedules] = useState<any>({});
   const [addressModalOpen, setAddressModalOpen] = useState(false);
-  const [deliveryAddress, setDeliveryAddress] = useState("Tap to set delivery location");
+  const [deliveryAddress, setDeliveryAddress] = useState(() => {
+    return localStorage.getItem("savedAddress") || "Tap to set delivery location";
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
@@ -323,17 +340,19 @@ export default function HomePage({
                 <button
                   key={i}
                   onClick={() => onExploreClick(order.name)}
-                  className="flex-shrink-0 w-[120px] bg-white rounded-[16px] border border-gray-100 shadow-sm overflow-hidden flex flex-col items-center p-3 active:scale-95 transition-transform"
+                  className="flex-shrink-0 w-[120px] h-[160px] bg-white rounded-[16px] border border-gray-100 shadow-sm overflow-hidden flex flex-col p-3 active:scale-95 transition-transform"
                 >
-                  <div className="w-[80px] h-[80px] mb-2 flex items-center justify-center">
+                  <div className="w-full h-[70px] mb-2 flex flex-shrink-0 items-center justify-center">
                     {order.image ? (
                       <img src={order.image} alt={order.name} className="w-full h-full object-contain" />
                     ) : (
                       <div className="w-full h-full bg-gray-100 rounded-[12px] flex items-center justify-center text-2xl">🍽️</div>
                     )}
                   </div>
-                  <p className="text-[11px] font-bold text-gray-800 text-center line-clamp-2 leading-snug">{order.name}</p>
-                  <p className="text-[10px] text-[#f51c27] font-semibold mt-1">AED {order.price}</p>
+                  <div className="flex flex-col flex-1 justify-between w-full">
+                    <p className="text-[11px] font-bold text-gray-800 text-center line-clamp-2 leading-snug">{order.name}</p>
+                    <p className="text-[10px] text-[#f51c27] font-semibold text-center mt-1">AED {order.price}</p>
+                  </div>
                 </button>
               ))}
             </div>
@@ -457,7 +476,10 @@ export default function HomePage({
       <AddressModal
         isOpen={addressModalOpen}
         onClose={() => setAddressModalOpen(false)}
-        onSelect={(addr) => setDeliveryAddress(addr)}
+        onSelect={(addr) => {
+          setDeliveryAddress(addr);
+          localStorage.setItem('savedAddress', addr);
+        }}
       />
 
       {/* Card reveal styles */}

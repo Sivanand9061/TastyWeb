@@ -20,6 +20,9 @@ export interface FooterSettings {
 export interface HomepageSettings {
   logoImage: string;
   heroImage: string;
+  splashScreenImage?: string;
+  faviconImage?: string;
+  ogImage?: string;
   crowdFavorites: CrowdFavorite[];
   aboutHeading: string;
   aboutSubheading: string;
@@ -58,10 +61,13 @@ const defaultCrowdFavorites: CrowdFavorite[] = [
 ];
 
 export const defaultHomepageSettings: HomepageSettings = {
-  logoImage: '/images/logo.png', // Or /images/Logo.jpeg, but Logo.png is used in App.tsx
-  heroImage: '/images/hero.jpeg',
+  logoImage: "/images/custom_logo.png",
+  heroImage: "/images/hero_banner.jpeg",
+  splashScreenImage: "",
+  faviconImage: "",
+  ogImage: "",
   crowdFavorites: defaultCrowdFavorites,
-  aboutHeading: "Our Story",
+  aboutHeading: "Our Journey Started Deep In the Details",
   aboutSubheading: "We started with a simple passion for incredible flavor...",
   footer: {
     locationUrl: "https://maps.google.com/?q=Tasty+Hot+Ajman",
