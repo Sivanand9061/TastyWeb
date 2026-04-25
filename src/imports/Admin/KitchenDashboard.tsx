@@ -169,7 +169,10 @@ export default function KitchenDashboard({ onBackHome }: { onBackHome: () => voi
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('Not authenticated');
-      const apiUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
+      const isLocalhost = window.location.hostname === 'localhost';
+      const apiUrl = (import.meta as any).env?.VITE_API_URL
+        ? (import.meta as any).env.VITE_API_URL
+        : isLocalhost ? 'http://localhost:5000' : '';
       const res = await fetch(`${apiUrl}/api/orders/reset`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },

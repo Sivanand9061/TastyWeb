@@ -16,10 +16,10 @@ function AddressModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (address: string) => void;
+  onSelect: (address: string, lat?: number, lng?: number) => void;
 }) {
   const [input, setInput] = useState("");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<{ display_name: string; lat: number; lng: number }[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
@@ -34,7 +34,11 @@ function AddressModal({
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`;
       const res = await fetch(url, { headers: { "Accept-Language": "en" } });
       const data = await res.json();
-      setSuggestions(data.map((d: { display_name: string }) => d.display_name));
+      setSuggestions(data.map((d: any) => ({
+        display_name: d.display_name,
+        lat: parseFloat(d.lat),
+        lng: parseFloat(d.lon)
+      })));
     } catch { /* ignore */ }
     setIsSearching(false);
   };
@@ -47,9 +51,9 @@ function AddressModal({
         const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
         const res = await fetch(url, { headers: { "Accept-Language": "en" } });
         const data = await res.json();
-        onSelect(data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        onSelect(data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng);
         onClose();
-      } catch { onSelect(`${lat.toFixed(5)}, ${lng.toFixed(5)}`); onClose(); }
+      } catch { onSelect(`${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng); onClose(); }
     });
   };
 
@@ -104,13 +108,13 @@ function AddressModal({
               {suggestions.map((s, i) => (
                 <button
                   key={i}
-                  onClick={() => { onSelect(s); onClose(); }}
+                  onClick={() => { onSelect(s.display_name, s.lat, s.lng); onClose(); }}
                   className="w-full flex items-center gap-3 p-3 rounded-[12px] hover:bg-gray-50 transition-colors text-left"
                 >
                   <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
                     <MapPin size={16} className="text-gray-500" />
                   </div>
-                  <p className="text-[13px] text-gray-800 leading-snug line-clamp-2">{s}</p>
+                  <p className="text-[13px] text-gray-800 leading-snug line-clamp-2">{s.display_name}</p>
                 </button>
               ))}
 
@@ -260,7 +264,7 @@ export default function HomePage({
           <div className="flex items-center h-[40px]">
             <img 
               src={settings.logoImage} 
-              alt="Tasty Hot Logo" 
+              alt={`${settings.restaurantName} Logo`} 
               className="h-full w-auto max-w-[140px] object-contain drop-shadow-md" 
             />
           </div>
@@ -351,7 +355,7 @@ export default function HomePage({
                   </div>
                   <div className="flex flex-col flex-1 justify-between w-full">
                     <p className="text-[11px] font-bold text-gray-800 text-center line-clamp-2 leading-snug">{order.name}</p>
-                    <p className="text-[10px] text-[#f51c27] font-semibold text-center mt-1">AED {order.price}</p>
+                    <p className="text-[10px] text-[#f51c27] font-semibold text-center mt-1">{settings.currency} {order.price}</p>
                   </div>
                 </button>
               ))}
@@ -446,7 +450,7 @@ export default function HomePage({
         {/* ── Footer ── */}
         <footer className="w-full py-12 flex flex-col items-center bg-white border-t border-gray-100">
           <div className="w-[140px] h-[50px] mb-8 grayscale hover:grayscale-0 transition-all duration-300">
-            <img src={settings.logoImage} alt="Tasty Hot Logo" className="h-full w-full object-contain" />
+            <img src={settings.logoImage} alt={`${settings.restaurantName} Logo`} className="h-full w-full object-contain" />
           </div>
           <div className="flex justify-center gap-8 text-[11px] font-bold tracking-widest text-black mb-6 px-4 flex-wrap">
             <a href={settings.footer?.locationUrl} target="_blank" rel="noreferrer" className="uppercase hover:text-[#f51c27] transition-colors flex items-center gap-1.5">
@@ -464,7 +468,7 @@ export default function HomePage({
               <Facebook size={20} />
             </a>
           </div>
-          <p className="text-[10px] text-gray-400 mb-2">© 2026 Tasty Hot. All rights reserved.</p>
+          <p className="text-[10px] text-gray-400 mb-2">© 2026 {settings.restaurantName}. All rights reserved.</p>
           <div className="flex gap-4 text-[10px] text-gray-400">
             <a href="#" className="hover:text-gray-800">Privacy Policy</a>
             <a href="#" className="hover:text-gray-800">Terms of Service</a>
@@ -476,9 +480,16 @@ export default function HomePage({
       <AddressModal
         isOpen={addressModalOpen}
         onClose={() => setAddressModalOpen(false)}
-        onSelect={(addr) => {
+        onSelect={(addr, lat, lng) => {
           setDeliveryAddress(addr);
           localStorage.setItem('savedAddress', addr);
+          if (lat !== undefined && lng !== undefined) {
+             localStorage.setItem('savedLat', lat.toString());
+             localStorage.setItem('savedLng', lng.toString());
+          } else {
+             localStorage.removeItem('savedLat');
+             localStorage.removeItem('savedLng');
+          }
         }}
       />
 

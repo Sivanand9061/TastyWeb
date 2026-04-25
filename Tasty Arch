@@ -1,0 +1,98 @@
+# 🍔 TastyWeb (Tasty Hot) Architecture Overview
+
+This document explains how the TastyWeb restaurant ordering platform works from the ground up. It’s designed to be easy to understand, even if you just know the basics of web development!
+
+---
+
+## 1. The Big Picture
+
+At its core, TastyWeb is split into three main pieces:
+1.  **Frontend (The Client):** What the user sees and interacts with in their browser.
+2.  **Backend (The Server):** The brain of the operation that handles logic, security, and talking to the database securely.
+3.  **Database:** Where all the data (menu items, orders, user roles) is stored in real-time.
+
+---
+
+## 2. The Frontend (What You See)
+
+The frontend is built using **React** (a popular JavaScript library for building user interfaces) and powered by **Vite** (a super-fast build tool that bundles the code). 
+
+### Key Technologies Used:
+*   **Tailwind CSS:** A utility-first CSS framework. Instead of writing custom CSS files, we use Tailwind classes directly in the HTML/JSX (e.g., `bg-red-500 text-white`) to style things rapidly.
+*   **Radix UI:** This provides unstyled, accessible components (like dropdown menus or popups) that we then style with Tailwind. It ensures the app works perfectly for screen readers and keyboard navigation.
+*   **React Router:** Handles the navigation between pages (like going from the Home page to the Cart) without reloading the entire website (creating a "Single Page Application").
+
+### How it works:
+When a customer clicks "Add to Cart", the React state updates instantly to show the item in their cart. When they check out, the frontend collects their location, order details, and sends a request to our Backend API.
+
+---
+
+## 3. The Backend (The Brains)
+
+The backend is a **Node.js** server running the **Express.js** framework. It acts as the middleman between the frontend and the database.
+
+### Why do we need a backend? 
+Can't the frontend talk to the database directly? Yes, but it's dangerous! The backend exists to:
+1.  Hide secret keys (like email passwords or database admin credentials).
+2.  Enforce rules (e.g., "Only admins can change the menu status").
+3.  Do heavy lifting (like calculating delivery distances or sending emails).
+
+### Key Features:
+*   **CORS (Cross-Origin Resource Sharing):** A security feature that ensures only *our* frontend website is allowed to talk to our backend.
+*   **Rate Limiting:** Prevents hackers from spamming our server with fake orders.
+
+---
+
+## 4. The Database (Where Data Lives)
+
+We use **Firebase Realtime Database** (by Google).
+
+Unlike traditional databases where you have to constantly ask "Are there new orders?", Firebase is **real-time**. When a new order is added to the database, Firebase instantly pushes that update to the kitchen's screen. No page refreshes needed!
+
+---
+
+## 5. The APIs (How They Talk)
+
+An API (Application Programming Interface) is like a waiter taking your order to the kitchen. The frontend makes an HTTP request to specific backend URLs (routes).
+
+Here are the main APIs we built:
+*   **`/api/menu`:** Fetches the latest menu items, prices, and availability.
+*   **`/api/orders`:** 
+    *   `POST /`: Used by customers to place a new order.
+    *   `GET /`: Used by admins to see all orders.
+*   **`/api/kitchen`:** Dedicated routes for the kitchen staff to update an order's status (e.g., "Pending" -> "Preparing" -> "Delivered").
+
+---
+
+## 6. Security Layers (Keeping Data Safe)
+
+Security is crucial when dealing with customer data and orders. Here is how TastyWeb is protected:
+
+1.  **Authentication & Authorization (`middleware/auth.js`):** 
+    *   Before the backend gives out sensitive data (like all orders), it checks for a secret "Token" in the request. 
+    *   The backend verifies this token with Firebase. If the user doesn't have an "admin" role in the database, the backend returns a `403 Forbidden` error. This stops hackers from accessing admin panels.
+2.  **Input Sanitization:** 
+    *   When a user submits an order, the backend cleans up the text (removing malicious code like `<script>`) to prevent Cross-Site Scripting (XSS) attacks.
+3.  **Server-Side Validation:** 
+    *   Never trust the frontend! The backend double-checks if the requested food is actually in stock and if the customer's delivery address is within the allowed delivery radius (e.g., 20km max).
+4.  **Rate Limiting (`middleware/rateLimiter.js`):**
+    *   Limits how many orders a single IP address can place in a short time. This prevents Denial of Service (DDoS) attacks or spam.
+
+---
+
+## 7. Step-by-Step: The Order Flow
+
+Let's walk through what happens when a customer places an order:
+
+1.  **Selection:** The customer adds a "Spicy Chicken Burger" to their cart on the React frontend.
+2.  **Checkout:** The customer enters their address. The frontend sends their GPS coordinates to the backend.
+3.  **Backend Verification:** 
+    *   The Express server receives the request.
+    *   It checks the database: *Is the Spicy Chicken Burger in stock? Is it within the allowed time schedule?*
+    *   It calculates the distance: *Is the customer within the 20km delivery radius?*
+4.  **Database Write:** If all checks pass, the backend securely writes the new order to the Firebase Realtime Database.
+5.  **Notifications Triggered:**
+    *   The kitchen's tablet (connected to Firebase) instantly updates to show the new order.
+    *   The backend triggers `nodemailer` to send a professional HTML email receipt to the customer.
+    *   A webhook pushes the order details to an admin's Google Sheet for accounting.
+6.  **Confirmation:** The backend replies to the frontend with a "Success" message, and the customer sees an order confirmation screen.

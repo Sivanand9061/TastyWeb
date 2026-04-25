@@ -4,6 +4,7 @@ import { db } from '../../firebase';
 import { ref, query, orderByChild, equalTo, onValue } from 'firebase/database';
 import { Package, Clock, CheckCircle2, ChevronRight, LogOut, ArrowLeft } from 'lucide-react';
 import { auth } from '../../firebase';
+import { useHomepageSettings } from '../HomePage/useHomepageSettings';
 
 interface OrderItem {
   name: string;
@@ -22,6 +23,8 @@ interface Order {
 
 export default function ProfileDashboard({ onBackHome }: { onBackHome: () => void }) {
   const { currentUser } = useAuth();
+  const { settings } = useHomepageSettings();
+  const currency = settings.currency || 'AED';
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -176,7 +179,7 @@ export default function ProfileDashboard({ onBackHome }: { onBackHome: () => voi
                      <span className={`px-2 py-1 rounded-md text-xs font-bold border ${getStatusColor(order.status)}`}>
                        {order.status}
                      </span>
-                     <span className="font-bold text-[#1caa00]">AED {order.totalAmount}</span>
+                     <span className="font-bold text-[#1caa00]">{currency} {order.totalAmount}</span>
                    </div>
                  </div>
                ))}

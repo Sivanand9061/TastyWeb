@@ -68,13 +68,15 @@ router.post('/', orderLimiter, async (req, res, next) => {
     }
 
     // Server-Side Stock Validation
-    const [menuSnap, schedSnap] = await Promise.all([
-      req.db.ref('menu').once('value'),
-      req.db.ref('settings/categorySchedules').once('value')
+    const [menuSnap, schedSnap, feeSnap] = await Promise.all([
+      req.db.ref('menu_items').once('value'),   // ← correct path
+      req.db.ref('settings/categorySchedules').once('value'),
+      req.db.ref('settings/deliveryFee').once('value')
     ]);
 
     const menuData = menuSnap.val() || {};
     const categorySchedules = schedSnap.val() || {};
+    const deliveryFee = orderType === 'delivery' ? (feeSnap.exists() ? Number(feeSnap.val()) : 10) : 0;
 
     const nowDubai = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dubai" }));
     const currentHM = `${String(nowDubai.getHours()).padStart(2, '0')}:${String(nowDubai.getMinutes()).padStart(2, '0')}`;
@@ -134,7 +136,7 @@ router.post('/', orderLimiter, async (req, res, next) => {
       totalAmount,
       notes: notes || '',
       status: 'Pending',
-      deliveryFee: orderType === 'delivery' ? 10 : 0,
+      deliveryFee,
       orderType: orderType || 'delivery',
       tableNumber: tableNumber || null,
       createdAt: new Date().toISOString(),
@@ -147,7 +149,7 @@ router.post('/', orderLimiter, async (req, res, next) => {
     console.log(`✅ Order created: ${orderNumber}`);
     console.log(`📍 Customer: ${customerName}`);
     console.log(`📱 Phone: ${phone}`);
-    console.log(`💰 Total: AED ${totalAmount}`);
+    console.log(`💰 Total: ${totalAmount}`);
 
     // Push to Google Sheets (non-blocking)
     pushToSheets({

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Plus, ArrowLeft } from "lucide-react";
 import { ref, get, onValue } from "firebase/database";
 import { db } from "../../firebase";
+import { useHomepageSettings } from '../HomePage/useHomepageSettings';
 
 
 interface MenuItem {
@@ -184,9 +185,10 @@ interface MenuItemCardProps {
   onClick: (item: MenuItem) => void;
   isAvailable: boolean;
   onAddToCart?: (item: MenuItem & { quantity: number }) => void;
+  currency: string;
 }
 
-function MenuItemCard({ item, onClick, isAvailable, onAddToCart }: MenuItemCardProps) {
+function MenuItemCard({ item, onClick, isAvailable, onAddToCart, currency }: MenuItemCardProps) {
   const hasVariants = item.variants && item.variants.length > 0;
 
   const handleAddToCartClick = (e: React.MouseEvent) => {
@@ -218,7 +220,7 @@ function MenuItemCard({ item, onClick, isAvailable, onAddToCart }: MenuItemCardP
             <h3 className={`text-[15.5px] font-bold leading-tight ${!isAvailable ? 'text-gray-400' : 'text-gray-900'}`}>{item.name}</h3>
             {isAvailable ? (
               <p className="text-[#f51c27] font-black text-[15px] shrink-0">
-                AED {!hasVariants ? item.price : Math.min(...item.variants!.map(v => parseFloat(v.price))).toFixed(0)}
+                {currency} {!hasVariants ? item.price : Math.min(...item.variants!.map(v => parseFloat(v.price))).toFixed(0)}
               </p>
             ) : (
               <span className="text-red-500 text-[9px] font-bold px-2 py-1 bg-red-50 rounded-full shrink-0 uppercase tracking-tighter">OUT OF STOCK</span>
@@ -281,7 +283,7 @@ function MenuItemCard({ item, onClick, isAvailable, onAddToCart }: MenuItemCardP
               className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 hover:bg-[#f51c27] hover:text-white hover:border-[#f51c27] transition-all duration-200 group"
             >
               <span className="text-[11px] font-bold text-gray-700 group-hover:text-white">{v.label}</span>
-              <span className="text-[10px] text-gray-500 group-hover:text-white/90">· ${v.price}</span>
+              <span className="text-[10px] text-gray-500 group-hover:text-white/90">· {currency} {v.price}</span>
             </button>
           ))}
         </div>
@@ -299,9 +301,10 @@ interface MenuListProps {
   menuData: Record<string, MenuItem[]>;
   onAddToCart?: (item: MenuItem & { quantity: number }) => void;
   isItemAvailable: (item: MenuItem) => boolean;
+  currency: string;
 }
 
-function MenuList({ categories, sortedCategories, setCategoryRef, onItemClick, searchQuery, menuData, onAddToCart, isItemAvailable }: MenuListProps) {
+function MenuList({ categories, sortedCategories, setCategoryRef, onItemClick, searchQuery, menuData, onAddToCart, isItemAvailable, currency }: MenuListProps) {
 
   const filteredMenuData = () => {
     if (!searchQuery.trim()) return menuData;
@@ -354,6 +357,7 @@ function MenuList({ categories, sortedCategories, setCategoryRef, onItemClick, s
                 onClick={onItemClick}
                 isAvailable={isItemAvailable(item)}
                 onAddToCart={onAddToCart}
+                currency={currency}
               />
             ))}
           </div>
@@ -369,9 +373,10 @@ interface ProductDetailProps {
   onClose: () => void;
   onAddToCart?: (item: MenuItem & { quantity: number }) => void;
   isAvailable: boolean;
+  currency?: string;
 }
 
-function ProductDetail({ item, isOpen, onClose, onAddToCart, isAvailable }: ProductDetailProps) {
+function ProductDetail({ item, isOpen, onClose, onAddToCart, isAvailable, currency = 'AED' }: ProductDetailProps) {
   const [selectedVariant, setSelectedVariant] = useState<{ label: string; price: string } | null>(null);
 
   // Reset variant selection each time a new item opens
@@ -461,7 +466,7 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart, isAvailable }: Prod
                             : 'bg-transparent border-[var(--bg-card-border)] text-[var(--text-secondary)] hover:border-[var(--accent)]'
                             }`}
                         >
-                          {v.label} &nbsp;·&nbsp; AED {v.price}
+                          {v.label} &nbsp;·&nbsp; {currency} {v.price}
                         </button>
                       );
                     })}
@@ -470,7 +475,7 @@ function ProductDetail({ item, isOpen, onClose, onAddToCart, isAvailable }: Prod
               )}
 
               {/* Price */}
-              <p className="text-[32px] font-bold text-[var(--text-price)] mb-8">AED {displayPrice}</p>
+              <p className="text-[32px] font-bold text-[var(--text-price)] mb-8">{currency} {displayPrice}</p>
 
               {/* Add to Cart Button */}
               <button
@@ -633,6 +638,10 @@ export default function Categories({
   // Only show loading spinner if there is no cached data yet (true first-time visitor)
   const [loading, setLoading] = useState<boolean>(cachedMenu === null);
   const categoryRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Dynamic currency from Firebase settings
+  const { settings } = useHomepageSettings();
+  const currency = settings.currency || 'AED';
 
   // Re-group menu data whenever raw items or categories change
   useEffect(() => {
@@ -837,6 +846,7 @@ export default function Categories({
                             onClick={openProductDetail}
                             isAvailable={isItemCurrentlyAvailable(item)}
                             onAddToCart={handleAddItemToCart}
+                            currency={currency}
                           />
                         ))}
                       </div>
@@ -854,6 +864,7 @@ export default function Categories({
                 menuData={menuData}
                 onAddToCart={handleAddItemToCart}
                 isItemAvailable={isItemCurrentlyAvailable}
+                currency={currency}
               />
             )}
           </div>
@@ -865,6 +876,7 @@ export default function Categories({
         onClose={closeProductDetail}
         onAddToCart={handleAddItemToCart}
         isAvailable={selectedItem ? isItemCurrentlyAvailable(selectedItem) : true}
+        currency={currency}
       />
 
       {/* Floating Cart Capsule */}

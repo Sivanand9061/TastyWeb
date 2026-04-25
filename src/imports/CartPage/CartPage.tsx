@@ -8,6 +8,7 @@ import { db } from "../../firebase";
 import { toast } from "sonner";
 import AddressAutocomplete from "./AddressAutocomplete";
 import { calculateDistance } from "../../utils/distance";
+import { useHomepageSettings } from "../HomePage/useHomepageSettings";
 
 // Ajman Restaurant coordinates
 const RESTAURANT_LAT = 25.3908;
@@ -34,8 +35,8 @@ interface OrderFormData {
   tableNumber?: string;
 }
 
-function CartItemCard({ item, onRemove, onQuantityChange }: { item: CartItem & { id: string }; onRemove: () => void; onQuantityChange: (qty: number) => void }) {
-  const priceNum = parseFloat(item.price.replace("AED ", ""));
+function CartItemCard({ item, onRemove, onQuantityChange, currency }: { item: CartItem & { id: string }; onRemove: () => void; onQuantityChange: (qty: number) => void; currency: string }) {
+  const priceNum = parseFloat(item.price.replace(/[^\d.]/g, ''));
   const total = (priceNum * item.quantity).toFixed(2);
 
   return (
@@ -81,7 +82,7 @@ function CartItemCard({ item, onRemove, onQuantityChange }: { item: CartItem & {
             </div>
 
             <div className="text-right">
-              <p className="text-[16px] font-bold text-[#1caa00] mb-2">AED {total}</p>
+              <p className="text-[16px] font-bold text-[#1caa00] mb-2">{currency} {total}</p>
               <button
                 onClick={onRemove}
                 className="text-[12px] text-[#d90429] hover:text-[#f51c27] font-medium"
@@ -115,7 +116,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [distanceError, setDistanceError] = useState("");
-  const deliveryRadiusKm = 10;
+  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(10);
 
   const isTakeaway = orderType === 'takeaway';
   const isDineIn = orderType === 'dinein';
@@ -126,28 +127,56 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
   // Clear form when modal opens, and auto-fill if user logged in
   useEffect(() => {
     if (isOpen) {
+      // Fetch dynamic delivery radius from settings
+      get(ref(db, 'settings/deliveryRadiusKm')).then(snap => {
+        if (snap.exists()) setDeliveryRadiusKm(Number(snap.val()) || 10);
+      });
+
       if (currentUser) {
         get(ref(db, `users/${currentUser.uid}`)).then(snapshot => {
+          const savedAddr = localStorage.getItem('savedAddress');
+          const savedLat = localStorage.getItem('savedLat') ? parseFloat(localStorage.getItem('savedLat')!) : null;
+          const savedLng = localStorage.getItem('savedLng') ? parseFloat(localStorage.getItem('savedLng')!) : null;
+          
           if (snapshot.exists()) {
             const data = snapshot.val();
             setFormData({
               name: currentUser.displayName || data.name || "",
               email: currentUser.email || "",
-              address: data.address || localStorage.getItem('savedAddress') || "",
-              lat: data.lat,
-              lng: data.lng,
+              address: savedAddr || data.address || "",
+              lat: savedLat || data.lat || null,
+              lng: savedLng || data.lng || null,
               phone: data.phone || "",
               notes: "",
               tableNumber: ""
             });
           } else {
-            const savedAddr = localStorage.getItem('savedAddress') || "";
-            setFormData({ name: currentUser.displayName || "", email: currentUser.email || "", address: savedAddr, phone: "", notes: "", tableNumber: "" });
+            setFormData({ 
+              name: currentUser.displayName || "", 
+              email: currentUser.email || "", 
+              address: savedAddr || "", 
+              lat: savedLat, 
+              lng: savedLng, 
+              phone: "", 
+              notes: "", 
+              tableNumber: "" 
+            });
           }
         });
       } else {
         const savedAddr = localStorage.getItem('savedAddress') || "";
-        setFormData({ name: "", email: "", address: savedAddr, phone: "", notes: "", tableNumber: "" });
+        const savedLat = localStorage.getItem('savedLat') ? parseFloat(localStorage.getItem('savedLat')!) : null;
+        const savedLng = localStorage.getItem('savedLng') ? parseFloat(localStorage.getItem('savedLng')!) : null;
+        setFormData({ 
+          name: "", 
+          email: "", 
+          address: savedAddr, 
+          lat: savedLat || undefined, 
+          lng: savedLng || undefined, 
+          phone: "", 
+          notes: "", 
+          tableNumber: "" 
+        });
       }
       setErrors({});
       setDistanceError("");
@@ -506,7 +535,7 @@ function OrderForm({ isOpen, onClose, onSubmit, cartTotal }: {
                     {/* Submit Button */}
                     <button
                       type="submit"
-                      disabled={isSubmitting || Object.values(errors).some(err => err.length > 0) || !formData.name.trim() || (!isTakeaway && !formData.address.trim()) || !!distanceError}
+                      disabled={isSubmitting || Object.values(errors).some(err => err.length > 0) || !formData.name.trim() || (needsAddress && !formData.address.trim()) || !!distanceError}
                       className="w-full bg-[rgba(157,157,157,0.26)] backdrop-blur-sm shadow-[0px_2px_9.7px_0px_rgba(0,0,0,0.25)] rounded-[35px] py-4 text-[18px] font-semibold text-[#f51c27] hover:bg-[rgba(157,157,157,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isSubmitting ? (
@@ -692,6 +721,8 @@ export default function CartPage({ cartItems, onUpdateCartItems, onBackHome, onC
   onNavigateToProfile?: () => void;
 }) {
   const { currentUser, isAdmin } = useAuth();
+  const { settings } = useHomepageSettings();
+  const currency = settings?.currency || 'AED';
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
@@ -707,7 +738,7 @@ export default function CartPage({ cartItems, onUpdateCartItems, onBackHome, onC
   }, [currentUser, pendingCheckout]);
 
   const cartTotal = cartItems
-    .reduce((sum, item) => sum + parseFloat(item.price.replace("AED ", "")) * item.quantity, 0)
+    .reduce((sum, item) => sum + parseFloat(item.price.replace(/[^\d.]/g, '')) * item.quantity, 0)
     .toFixed(2);
 
   const handleRemoveItem = (index: number) => {
@@ -731,8 +762,12 @@ export default function CartPage({ cartItems, onUpdateCartItems, onBackHome, onC
   const handleOrderSubmit = async (formData: OrderFormData & { orderType: string }) => {
     try {
       const isLocalhost = window.location.hostname === 'localhost';
-      const defaultApi = isLocalhost ? 'http://localhost:5000' : `http://${window.location.hostname}:5000`;
-      const apiUrl = import.meta.env.VITE_API_URL || defaultApi;
+      // In production always use the env var — never fall back to bare http:// (mixed-content error on HTTPS)
+      const apiUrl = import.meta.env.VITE_API_URL
+        ? import.meta.env.VITE_API_URL
+        : isLocalhost
+          ? 'http://localhost:5000'
+          : ''; // Forces a clear error rather than a silent mixed-content fail
 
       const needsAddress = formData.orderType === 'delivery';
       const isDineIn = formData.orderType === 'dinein';
@@ -753,7 +788,7 @@ export default function CartPage({ cartItems, onUpdateCartItems, onBackHome, onC
           price: item.price,
           quantity: item.quantity,
         })),
-        totalAmount: parseFloat(cartTotal.replace("AED ", "")),
+        totalAmount: parseFloat(cartTotal.replace(/[^\d.]/g, '')),
         userId: currentUser?.uid,
       };
 
@@ -781,9 +816,9 @@ export default function CartPage({ cartItems, onUpdateCartItems, onBackHome, onC
       // ── Save to localStorage for "Order Again" section ──
       try {
         const existing: any[] = JSON.parse(localStorage.getItem('recentOrders') || '[]');
-        const newItems = items.map(item => ({
+        const newItems = cartItems.map(item => ({
           name: item.name,
-          price: parseFloat(item.price.replace('AED ', '')).toFixed(2),
+          price: parseFloat(item.price.replace(/[^\d.]/g, '')).toFixed(2),
           image: item.image || null,
           orderedAt: Date.now(),
         }));
@@ -871,6 +906,7 @@ export default function CartPage({ cartItems, onUpdateCartItems, onBackHome, onC
                     item={{ ...item, id: index.toString() }}
                     onRemove={() => handleRemoveItem(index)}
                     onQuantityChange={(qty) => handleQuantityChange(index, qty)}
+                    currency={currency}
                   />
                 ))}
               </div>
@@ -884,7 +920,7 @@ export default function CartPage({ cartItems, onUpdateCartItems, onBackHome, onC
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-[14px]">
                     <span className="text-[#727272]">Subtotal</span>
-                    <span className="text-[#1c1c1a] font-medium">AED {cartTotal}</span>
+                    <span className="text-[#1c1c1a] font-medium">{currency} {cartTotal}</span>
                   </div>
                   <div className="flex justify-between text-[14px]">
                     <span className="text-[#727272]">Delivery Fee</span>
@@ -893,7 +929,7 @@ export default function CartPage({ cartItems, onUpdateCartItems, onBackHome, onC
                 </div>
                 <div className="border-t border-[#e0e0e0] pt-4 flex justify-between">
                   <span className="text-[18px] font-bold text-[#1c1c1a]">Total</span>
-                  <span className="text-[24px] font-bold text-[#1caa00]">AED {cartTotal}</span>
+                  <span className="text-[24px] font-bold text-[#1caa00]">{currency} {cartTotal}</span>
                 </div>
               </motion.div>
 
@@ -930,12 +966,12 @@ export default function CartPage({ cartItems, onUpdateCartItems, onBackHome, onC
           isOpen={isFormOpen}
           onClose={() => setIsFormOpen(false)}
           onSubmit={handleOrderSubmit}
-          cartTotal={`AED ${cartTotal}`}
+          cartTotal={`${currency} ${cartTotal}`}
         />
 
         <SuccessModal
           isOpen={isSuccessOpen}
-          total={`AED ${successTotal}`}
+          total={`${currency} ${successTotal}`}
           onContinueShopping={() => {
             setIsSuccessOpen(false);
             onContinueShopping?.();

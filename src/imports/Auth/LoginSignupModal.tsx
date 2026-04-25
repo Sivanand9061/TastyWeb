@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { signInWithPhoneNumber, RecaptchaVerifier, signInWithEmailAndPassword } from 'firebase/auth';
 import { ref, set, get } from 'firebase/database';
 import { auth, db } from '../../firebase';
@@ -30,8 +30,22 @@ interface LoginSignupModalProps {
 }
 
 export default function LoginSignupModal({ isOpen, onClose }: LoginSignupModalProps) {
-  // Option toggle
+  // Option toggle — hidden, activated by 5 rapid clicks on the modal title
   const [isAdminLogin, setIsAdminLogin] = useState(false);
+  const headerClickCountRef = useRef(0);
+  const headerClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleTitleSecretClick = () => {
+    headerClickCountRef.current += 1;
+    if (headerClickTimerRef.current) clearTimeout(headerClickTimerRef.current);
+    headerClickTimerRef.current = setTimeout(() => {
+      headerClickCountRef.current = 0;
+    }, 1500);
+    if (headerClickCountRef.current >= 5) {
+      headerClickCountRef.current = 0;
+      setIsAdminLogin(prev => !prev);
+    }
+  };
 
   // Phone state
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -159,7 +173,11 @@ export default function LoginSignupModal({ isOpen, onClose }: LoginSignupModalPr
 
             <div className="p-8">
               <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                <h2
+                  className="text-2xl font-bold text-gray-900 mb-2 cursor-default select-none"
+                  onClick={handleTitleSecretClick}
+                  title=""
+                >
                   {isAdminLogin ? 'Restaurant Login' : 'Verify Phone Number'}
                 </h2>
                 <p className="text-gray-500 text-sm">
@@ -286,16 +304,18 @@ export default function LoginSignupModal({ isOpen, onClose }: LoginSignupModalPr
                 </form>
               )}
 
-              {/* Seamless Admin Toggle */}
-              <div className="mt-6 text-center">
-                <button 
-                  type="button"
-                  onClick={() => setIsAdminLogin(!isAdminLogin)}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {isAdminLogin ? "Return to customer login" : "Restaurant Staff Login"}
-                </button>
-              </div>
+              {/* Admin mode indicator — only visible when already in admin mode */}
+              {isAdminLogin && (
+                <div className="mt-6 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setIsAdminLogin(false)}
+                    className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    Return to customer login
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         </div>

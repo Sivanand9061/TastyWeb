@@ -1,8 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const { requireAdmin } = require('../middleware/auth');
+
+// ── All kitchen routes require admin authentication ──
+// This prevents public access to customer PII (names, phones, addresses)
 
 // Get all pending/preparing orders for kitchen display
-router.get('/orders', async (req, res) => {
+router.get('/orders', requireAdmin, async (req, res) => {
   try {
     const snapshot = await req.db.ref('orders').once('value');
     const orders = snapshot.val();
@@ -23,7 +27,7 @@ router.get('/orders', async (req, res) => {
 });
 
 // Get all orders (for kitchen to see everything)
-router.get('/all', async (req, res) => {
+router.get('/all', requireAdmin, async (req, res) => {
   try {
     const snapshot = await req.db.ref('orders').once('value');
     const orders = snapshot.val();
@@ -44,7 +48,7 @@ router.get('/all', async (req, res) => {
 });
 
 // Get orders by status
-router.get('/status/:status', async (req, res) => {
+router.get('/status/:status', requireAdmin, async (req, res) => {
   try {
     const snapshot = await req.db.ref('orders').once('value');
     const orders = snapshot.val();

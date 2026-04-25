@@ -18,15 +18,20 @@ export interface FooterSettings {
 }
 
 export interface HomepageSettings {
+  restaurantName: string;
   logoImage: string;
   heroImage: string;
   splashScreenImage?: string;
   faviconImage?: string;
   ogImage?: string;
+  primaryColor: string;
+  secondaryColor: string;
+  currency: string;
   crowdFavorites: CrowdFavorite[];
   aboutHeading: string;
   aboutSubheading: string;
   footer: FooterSettings;
+  deliveryRadiusKm: number;
 }
 
 const defaultCrowdFavorites: CrowdFavorite[] = [
@@ -61,20 +66,25 @@ const defaultCrowdFavorites: CrowdFavorite[] = [
 ];
 
 export const defaultHomepageSettings: HomepageSettings = {
+  restaurantName: "Burger Street",
   logoImage: "/images/custom_logo.png",
   heroImage: "/images/hero_banner.jpeg",
   splashScreenImage: "",
   faviconImage: "",
   ogImage: "",
+  primaryColor: "#f51c27",
+  secondaryColor: "#1caa00",
+  currency: "AED",
   crowdFavorites: defaultCrowdFavorites,
   aboutHeading: "Our Journey Started Deep In the Details",
   aboutSubheading: "We started with a simple passion for incredible flavor...",
   footer: {
-    locationUrl: "https://maps.google.com/?q=Tasty+Hot+Ajman",
+    locationUrl: "https://maps.google.com/?q=Burger+Street",
     whatsappUrl: "https://wa.me/971505012081",
-    instagramUrl: "https://instagram.com/tastyhot",
-    facebookUrl: "https://facebook.com/tastyhot",
-  }
+    instagramUrl: "https://instagram.com/burgerstreet",
+    facebookUrl: "https://facebook.com/burgerstreet",
+  },
+  deliveryRadiusKm: 20
 };
 
 export function useHomepageSettings() {
@@ -94,12 +104,21 @@ export function useHomepageSettings() {
         }
 
         setSettings({
+          restaurantName: data.restaurantName || defaultHomepageSettings.restaurantName,
           logoImage: data.logoImage || defaultHomepageSettings.logoImage,
           heroImage: data.heroImage || defaultHomepageSettings.heroImage,
+          // Image assets — use ?? so empty string from admin is respected
+          splashScreenImage: data.splashScreenImage ?? defaultHomepageSettings.splashScreenImage,
+          faviconImage: data.faviconImage ?? defaultHomepageSettings.faviconImage,
+          ogImage: data.ogImage ?? defaultHomepageSettings.ogImage,
+          primaryColor: data.primaryColor || defaultHomepageSettings.primaryColor,
+          secondaryColor: data.secondaryColor || defaultHomepageSettings.secondaryColor,
+          currency: data.currency || defaultHomepageSettings.currency,
           crowdFavorites: crowdFavs,
           aboutHeading: data.aboutHeading !== undefined ? data.aboutHeading : defaultHomepageSettings.aboutHeading,
           aboutSubheading: data.aboutSubheading !== undefined ? data.aboutSubheading : defaultHomepageSettings.aboutSubheading,
           footer: data.footer || defaultHomepageSettings.footer,
+          deliveryRadiusKm: data.deliveryRadiusKm || defaultHomepageSettings.deliveryRadiusKm,
         });
       } else {
         setSettings(defaultHomepageSettings);

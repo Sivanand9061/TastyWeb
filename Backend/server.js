@@ -1,9 +1,17 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const admin = require('firebase-admin');
 
 const app = express();
+
+// ── Security Headers (helmet) ──
+// Sets X-Content-Type-Options, X-Frame-Options, HSTS, Referrer-Policy, etc.
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow images/fonts from CDN
+  contentSecurityPolicy: false, // CSP managed by Vercel/frontend separately
+}));
 
 // Middleware
 const allowedOrigins = process.env.NODE_ENV === 'production'
@@ -21,7 +29,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 const { globalLimiter } = require('./middleware/rateLimiter');
 app.use(globalLimiter);
-app.use(express.json());
+// Limit JSON body size to prevent oversized payload attacks
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 // Initialize Firebase Admin
 // In production (Render), FIREBASE_SERVICE_ACCOUNT env var holds the JSON string.
